@@ -1,5 +1,5 @@
 /**
- * @license Highmaps JS v4.2.0-modified (2016-01-27)
+ * @license Highmaps JS v4.2.0-modified (2016-01-30)
  *
  * (c) 2011-2016 Torstein Honsi
  *
@@ -11370,7 +11370,7 @@
          */
         getArgs: function () {
             var args = [].slice.call(arguments);
-        
+
             // Remove the optional first argument, renderTo, and
             // set it on this.
             if (isString(args[0]) || args[0].nodeName) {
@@ -11938,7 +11938,7 @@
             if (!renderTo) {
                 chart.renderTo = renderTo = optionsChart.renderTo;
             }
-        
+
             if (isString(renderTo)) {
                 chart.renderTo = renderTo = doc.getElementById(renderTo);
             }
@@ -11997,7 +11997,7 @@
             );
 
             // cache the cursor (#1650)
-            chart._cursor = container.style.cursor;
+            chart._cursor = 'default'; //container.style.cursor;
 
             // Initialize the renderer
             Ren = Highcharts[optionsChart.renderer] || Renderer;
@@ -12138,7 +12138,7 @@
 
             // Handle the isResizing counter
             chart.isResizing += 1;
-        
+
             // set the animation for the current process
             setAnimation(animation, chart);
 
@@ -12745,7 +12745,7 @@
 
             // add canvas
             chart.renderer.draw();
-        
+
             // Fire the load event if there are no external images
             if (!chart.renderer.imgCount) {
                 chart.onload();
@@ -12756,7 +12756,7 @@
 
         },
 
-        /** 
+        /**
          * On chart load
          */
         onload: function () {

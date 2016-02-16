@@ -110,7 +110,7 @@
 							finallyCallback(imageURL, callbackArgs);
 						}
 					};
-				
+
 				// This is called on load if the image drawing to canvas failed with a security error.
 				// We retry the drawing with crossOrigin set to Anonymous.
 				taintedHandler = function () {
@@ -195,7 +195,7 @@
 					}
 				} else {
 					// PNG download - create bitmap from SVG
-					
+
 					// First, try to get PNG by rendering on canvas
 					svgurl = svgToDataUrl(svg);
 					imageToDataUrl(svgurl, { /* args */ }, function (imageURL) {
@@ -285,7 +285,7 @@
 					embeddedSuccess,
 					// Tainted canvas
 					fallbackToExportServer,
-					// No canvas support 
+					// No canvas support
 					fallbackToExportServer,
 					// Failed to load source
 					fallbackToExportServer
@@ -297,6 +297,7 @@
 	};
 
 	// Extend the default options to use the local exporter logic
+  /*
 	Highcharts.getOptions().exporting.buttons.contextButton.menuItems = [{
 		textKey: 'printChart',
 		onclick: function () {
@@ -317,5 +318,6 @@
 			});
 		}
 	}];
+  */
 
 }));

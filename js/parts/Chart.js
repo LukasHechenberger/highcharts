@@ -25,7 +25,7 @@ Chart.prototype = {
 	 */
 	getArgs: function () {
 		var args = [].slice.call(arguments);
-		
+
 		// Remove the optional first argument, renderTo, and
 		// set it on this.
 		if (isString(args[0]) || args[0].nodeName) {
@@ -593,7 +593,7 @@ Chart.prototype = {
 		if (!renderTo) {
 			chart.renderTo = renderTo = optionsChart.renderTo;
 		}
-		
+
 		if (isString(renderTo)) {
 			chart.renderTo = renderTo = doc.getElementById(renderTo);
 		}
@@ -652,7 +652,7 @@ Chart.prototype = {
 		);
 
 		// cache the cursor (#1650)
-		chart._cursor = container.style.cursor;
+		chart._cursor = 'default'; //container.style.cursor;
 
 		// Initialize the renderer
 		Ren = Highcharts[optionsChart.renderer] || Renderer;
@@ -793,7 +793,7 @@ Chart.prototype = {
 
 		// Handle the isResizing counter
 		chart.isResizing += 1;
-		
+
 		// set the animation for the current process
 		setAnimation(animation, chart);
 
@@ -1400,7 +1400,7 @@ Chart.prototype = {
 
 		// add canvas
 		chart.renderer.draw();
-		
+
 		// Fire the load event if there are no external images
 		if (!chart.renderer.imgCount) {
 			chart.onload();
@@ -1411,7 +1411,7 @@ Chart.prototype = {
 
 	},
 
-	/** 
+	/**
 	 * On chart load
 	 */
 	onload: function () {

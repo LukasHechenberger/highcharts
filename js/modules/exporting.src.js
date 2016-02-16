@@ -166,16 +166,17 @@ defaultOptions.exporting = {
 // Add the Highcharts.post utility
 Highcharts.post = function (url, data, formAttributes) {
 	var name,
-		form;
+		  form;
 
 	// create the form
+  console.log(document, document.childNodes[0], doc.body);
 	form = createElement('form', merge({
 		method: 'post',
 		action: url,
 		enctype: 'multipart/form-data'
 	}, formAttributes), {
 		display: NONE
-	}, doc.body);
+	}, document.childNodes[0]);
 
 	// add the data
 	for (name in data) {
@@ -185,6 +186,8 @@ Highcharts.post = function (url, data, formAttributes) {
 			value: data[name]
 		}, null, form);
 	}
+
+  console.log(form);
 
 	// submit
 	form.submit();
@@ -210,7 +213,7 @@ extend(Chart.prototype, {
 			.replace(/ (NS[0-9]+\:)?href=/g, ' xlink:href=') // #3567
 			.replace(/\n/, ' ')
 			// Any HTML added to the container after the SVG (#894)
-			.replace(/<\/svg>.*?$/, '</svg>') 
+			.replace(/<\/svg>.*?$/, '</svg>')
 			// Batik doesn't support rgba fills and strokes (#3095)
 			.replace(/(fill|stroke)="rgba\(([ 0-9]+,[ 0-9]+,[ 0-9]+),([ 0-9\.]+)\)"/g, '$1="rgb($2)" $1-opacity="$3"')
 			/* This fails in IE < 8
@@ -262,7 +265,7 @@ extend(Chart.prototype, {
 			html,
 			options = merge(chart.options, additionalOptions), // copy the options and add extra options
 			allowHTML = options.exporting.allowHTML;
-			
+
 
 		// IE compatibility hack for generating SVG content that it doesn't really understand
 		if (!doc.createElementNS) {
@@ -359,7 +362,7 @@ extend(Chart.prototype, {
 				html = '<foreignObject x="0" y="0" width="200" height="200">' +
 					'<body xmlns="http://www.w3.org/1999/xhtml">' +
 					html[1] +
-					'</body>' + 
+					'</body>' +
 					'</foreignObject>';
 				svg = svg.replace('</svg>', html + '</svg>');
 			}
@@ -397,7 +400,7 @@ extend(Chart.prototype, {
 	 * @param {Object} chartOptions Additional chart options for the SVG representation of the chart
 	 */
 	exportChart: function (options, chartOptions) {
-		
+
 		var svg = this.getSVGForExport(options, chartOptions);
 
 		// merge the options
@@ -422,8 +425,9 @@ extend(Chart.prototype, {
 		var chart = this,
 			container = chart.container,
 			origDisplay = [],
-			origParent = container.parentNode,
-			body = doc.body,
+			origParent = container.parentNode;
+      console.log(doc, doc.body);
+		var body = doc.body,
 			childNodes = body.childNodes;
 
 		if (chart.isPrinting) { // block the button while in printing mode
