@@ -865,6 +865,14 @@ function setAnimation(animation, chart) {
 }
 
 /**
+ * Get the animation in object form, where a disabled animation is always
+ * returned with duration: 0
+ */
+function animObject(animation) {
+	return isObject(animation) ? merge(animation) : { duration: animation ? 500 : 0 };
+}
+
+/**
  * The time unit lookup
  */
 timeUnits = {
@@ -927,7 +935,7 @@ Highcharts.numberFormat = function (number, decimals, decimalPoint, thousandsSep
 	// Add the decimal point and the decimal component
 	if (+decimals) {
 		// Get the decimal component, and add power to avoid rounding errors with float numbers (#4573)
-		decimalComponent = absNumber - strinteger + Math.pow(10, -Math.max(decimals, origDec) - 1);
+		decimalComponent = Math.abs(absNumber - strinteger + Math.pow(10, -Math.max(decimals, origDec) - 1));
 		ret += decimalPoint + decimalComponent.toFixed(decimals).slice(2);
 	}
 
@@ -951,9 +959,9 @@ getStyle = function (el, prop) {
 
 	// For width and height, return the actual inner pixel size (#4913)
 	if (prop === 'width') {
-		return el.scrollWidth - getStyle(el, 'padding-left') - getStyle(el, 'padding-right');
+		return Math.min(el.offsetWidth, el.scrollWidth) - getStyle(el, 'padding-left') - getStyle(el, 'padding-right');
 	} else if (prop === 'height') {
-		return el.scrollHeight - getStyle(el, 'padding-top') - getStyle(el, 'padding-bottom');
+		return Math.min(el.offsetHeight, el.scrollHeight) - getStyle(el, 'padding-top') - getStyle(el, 'padding-bottom');
 	}
 
 	// Otherwise, get the computed style
@@ -1379,5 +1387,6 @@ Highcharts.addEvent = addEvent;
 Highcharts.removeEvent = removeEvent;
 Highcharts.fireEvent = fireEvent;
 Highcharts.animate = animate;
+Highcharts.animObject = animObject;
 Highcharts.stop = stop;
 

@@ -842,14 +842,13 @@ Chart.prototype = {
 		fireEvent(chart, 'resize');
 
 		// Fire endResize and set isResizing back. If animation is disabled, fire without delay
-		globalAnimation = renderer.globalAnimation; // Reassign it before using it, it may have changed since the top of this function.
 		syncTimeout(function () {
 			if (chart) {
 				fireEvent(chart, 'endResize', null, function () {
 					chart.isResizing -= 1;
 				});
 			}
-		}, globalAnimation === false ? 0 : ((globalAnimation && globalAnimation.duration) || 500));
+		}, animObject(globalAnimation).duration);
 	},
 
 	/**
@@ -1028,8 +1027,9 @@ Chart.prototype = {
 					})
 					.add();
 			} else {
+				plotBorder.strokeWidth = -plotBorderWidth;
 				plotBorder.animate(
-					plotBorder.crisp({ x: plotLeft, y: plotTop, width: plotWidth, height: plotHeight, strokeWidth: -plotBorderWidth }) //#3282 plotBorder should be negative
+					plotBorder.crisp({ x: plotLeft, y: plotTop, width: plotWidth, height: plotHeight }) //#3282 plotBorder should be negative
 				);
 			}
 		}
@@ -1418,7 +1418,7 @@ Chart.prototype = {
 		var chart = this;
 
 		// Run callbacks
-		each(this.callbacks.concat(this.callback), function (fn) {
+		each([this.callback].concat(this.callbacks), function (fn) {
 			if (fn && chart.index !== undefined) { // Chart destroyed in its own callback (#3600)
 				fn.apply(chart, [chart]);
 			}

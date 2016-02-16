@@ -2,7 +2,7 @@
 // @compilation_level SIMPLE_OPTIMIZATIONS
 
 /**
- * @license Highcharts JS v4.2.0-modified (2016-01-14)
+ * @license Highcharts JS v4.2.3-modified (2016-02-08)
  *
  * (c) 2009-2016 Torstein Honsi
  *
@@ -24,6 +24,7 @@ var arrayMin = Highcharts.arrayMin,
         map = Highcharts.map,
         pick = Highcharts.pick,
         pInt = Highcharts.pInt,
+        correctFloat = Highcharts.correctFloat,
         defaultPlotOptions = Highcharts.getOptions().plotOptions,
         seriesTypes = Highcharts.seriesTypes,
         extendClass = Highcharts.extendClass,
@@ -816,11 +817,10 @@ var arrayMin = Highcharts.arrayMin,
             linePath = [].concat(lowerPath, higherPath);
 
             // For the area path, we need to change the 'move' statement into 'lineTo' or 'curveTo'
-            if (!this.chart.polar) {
+            if (!this.chart.polar && higherAreaPath[0] === 'M') {
                 higherAreaPath[0] = 'L'; // this probably doesn't work for spline        
             }
             this.areaPath = this.areaPath.concat(lowerPath, higherAreaPath);
-        
             return linePath;
         },
 
@@ -1294,7 +1294,7 @@ var arrayMin = Highcharts.arrayMin,
         //stemWidth: null,
         threshold: null,
         tooltip: {
-            pointFormat: '<span style="color:{point.color}">\u25CF</span> <b> {series.name}</b><br/>' + // docs
+            pointFormat: '<span style="color:{point.color}">\u25CF</span> <b> {series.name}</b><br/>' +
                 'Maximum: {point.high}<br/>' +
                 'Upper quartile: {point.q3}<br/>' +
                 'Median: {point.median}<br/>' +
@@ -1556,7 +1556,7 @@ var arrayMin = Highcharts.arrayMin,
         grouping: false,
         linkedTo: ':previous',
         tooltip: {
-            pointFormat: '<span style="color:{point.color}">\u25CF</span> {series.name}: <b>{point.low}</b> - <b>{point.high}</b><br/>' // docs
+            pointFormat: '<span style="color:{point.color}">\u25CF</span> {series.name}: <b>{point.low}</b> - <b>{point.high}</b><br/>'
         },
         whiskerWidth: null
     });
@@ -1659,9 +1659,9 @@ var arrayMin = Highcharts.arrayMin,
                 // override point value for sums
                 // #3710 Update point does not propagate to sum
                 if (point.isSum) {
-                    point.y = yValue;
+                    point.y = correctFloat(yValue);
                 } else if (point.isIntermediateSum) {
-                    point.y = yValue - previousIntermediate; // #3840
+                    point.y = correctFloat(yValue - previousIntermediate); // #3840
                 }
                 // up points
                 y = mathMax(previousY, previousY + point.y) + range[0];
@@ -1741,9 +1741,9 @@ var arrayMin = Highcharts.arrayMin,
                 point = points && points[i] ? points[i] : {};
 
                 if (y === 'sum' || point.isSum) {
-                    yData[i] = sum;
+                    yData[i] = correctFloat(sum);
                 } else if (y === 'intermediateSum' || point.isIntermediateSum) {
-                    yData[i] = subSum;
+                    yData[i] = correctFloat(subSum);
                 } else {
                     sum += y;
                     subSum += y;

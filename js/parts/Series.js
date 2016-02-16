@@ -417,8 +417,7 @@ Series.prototype = {
 			}
 
 			series.data = [];
-			series.options.data = data;
-			//series.zData = zData;
+			series.options.data = series.userOptions.data = data;
 
 			// destroy old points
 			i = oldDataLength;
@@ -440,7 +439,7 @@ Series.prototype = {
 
 		// Typically for pie series, points need to be processed and generated
 		// prior to rendering the legend
-		if (options.legendType === 'point') { // docs: legendType now supported on more series types (at least column and pie)
+		if (options.legendType === 'point') {
 			this.processData();
 			this.generatePoints();
 		}
@@ -797,8 +796,8 @@ Series.prototype = {
 	/**
 	 * Return the series points with null points filtered out
 	 */
-	getValidPoints: function () {
-		return grep(this.points, function (point) {
+	getValidPoints: function (points) {
+		return grep(points || this.points || [], function (point) { // #5029
 			return !point.isNull;
 		});
 	},
@@ -963,6 +962,7 @@ Series.prototype = {
 
 					if (graphic) { // update
 						graphic[isInside ? 'show' : 'hide'](true) // Since the marker group isn't clipped, each individual marker must be toggled
+							.attr(pointAttr) // #4759
 							.animate(extend({
 								x: plotX - radius,
 								y: plotY - radius
@@ -1131,7 +1131,7 @@ Series.prototype = {
 					// Handle colors for column and pies
 					if (!seriesOptions.marker || (point.negative && !pointStateOptionsHover.fillColor && !stateOptionsHover.fillColor)) { // column, bar, point or negative threshold for series with markers (#3636)
 						// If no hover color is given, brighten the normal color. #1619, #2579
-						pointStateOptionsHover.color = pointStateOptionsHover.color || (!point.options.color && stateOptionsHover[(point.negative && seriesNegativeColor ? 'negativeColor' : 'color')]) ||
+						pointStateOptionsHover[series.pointAttrToOptions.fill] = pointStateOptionsHover.color || (!point.options.color && stateOptionsHover[(point.negative && seriesNegativeColor ? 'negativeColor' : 'color')]) ||
 							Color(point.color)
 								.brighten(pointStateOptionsHover.brightness || stateOptionsHover.brightness)
 								.get();
@@ -1256,10 +1256,27 @@ Series.prototype = {
 		var series = this,
 			options = series.options,
 			step = options.step,
+			reversed,
 			graphPath = [],
 			gap;
 
 		points = points || series.points;
+
+		// Bottom of a stack is reversed
+		reversed = points.reversed;
+		if (reversed) {
+			points.reverse();
+		}
+		// Reverse the steps (#5004)
+		step = { right: 1, center: 2 }[step] || (step && 3);
+		if (step && reversed) {
+			step = 4 - step;
+		}
+
+		// Remove invalid points, especially in spline (#5015)
+		if (options.connectNulls && !nullsAsZeroes && !connectCliffs) {
+			points = this.getValidPoints(points);
+		}
 
 		// Build the line
 		each(points, function (point, i) {
@@ -1274,7 +1291,7 @@ Series.prototype = {
 			}
 
 			// Line series, nullsAsZeroes is not handled
-			if (point.isNull && !defined(nullsAsZeroes)) {
+			if (point.isNull && !defined(nullsAsZeroes) && i > 0) {
 				gap = !options.connectNulls;
 
 			// Area series, nullsAsZeroes is set
@@ -1292,14 +1309,14 @@ Series.prototype = {
 
 				} else if (step) {
 
-					if (step === 'right') {
+					if (step === 1) { // right
 						pathToPoint = [
 							L,
 							lastPoint.plotX,
 							plotY
 						];
 						
-					} else if (step === 'center') {
+					} else if (step === 2) { // center
 						pathToPoint = [
 							L,
 							(lastPoint.plotX + plotX) / 2,
@@ -1591,10 +1608,9 @@ Series.prototype = {
 			chart = series.chart,
 			group,
 			options = series.options,
-			animation = options.animation,
 			// Animation doesn't work in IE8 quirks when the group div is hidden,
 			// and looks bad in other oldIE
-			animDuration = (animation && !!series.animate && chart.renderer.isSVG && pick(animation.duration, 500)) || 0,
+			animDuration = !!series.animate && chart.renderer.isSVG && animObject(options.animation).duration,
 			visibility = series.visible ? 'inherit' : 'hidden', // #2597
 			zIndex = options.zIndex,
 			hasRendered = series.hasRendered,
@@ -1772,11 +1788,7 @@ Series.prototype = {
 
 		// Start the recursive build process with a clone of the points array and null points filtered out (#3873)
 		function startRecursive() {
-			var points = grep(series.points || [], function (point) { // #4390
-				return point.y !== null;
-			});
-
-			series.kdTree = _kdtree(points, dimensions, dimensions);
+			series.kdTree = _kdtree(series.getValidPoints(), dimensions, dimensions);
 		}
 		delete series.kdTree;
 

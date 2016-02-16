@@ -35,7 +35,6 @@ SVGElement.prototype = {
 		var animOptions = pick(options, this.renderer.globalAnimation, true);
 		stop(this); // stop regardless of animation actually running, or reverting to .attr (#607)
 		if (animOptions) {
-			animOptions = merge(animOptions, {}); //#2625
 			if (complete) { // allows using a callback with the global animation without overwriting it
 				animOptions.complete = complete;
 			}
@@ -164,8 +163,6 @@ SVGElement.prototype = {
 	 * and apply strokes to the copy.
 	 *
 	 * Contrast checks at http://jsfiddle.net/highcharts/43soe9m1/2/
-	 *
-	 * docs: update default, document the polyfill and the limitations on hex colors and pixel values, document contrast pseudo-color
 	 */
 	applyTextShadow: function (textShadow) {
 		var elem = this.element,
@@ -415,7 +412,7 @@ SVGElement.prototype = {
 			key,
 			attribs = {},
 			normalizer,
-			strokeWidth = rect.strokeWidth || wrapper.strokeWidth || 0;
+			strokeWidth = wrapper.strokeWidth || 0;
 
 		normalizer = mathRound(strokeWidth) % 2 / 2; // mathRound because strokeWidth can sometimes have roundoff errors
 
@@ -1462,13 +1459,13 @@ SVGRenderer.prototype = {
 
 
 			// build the lines
-			each(lines, function (line, lineNo) {
+			each(lines, function buildTextLines(line, lineNo) {
 				var spans, spanNo = 0;
 
 				line = line.replace(/<span/g, '|||<span').replace(/<\/span>/g, '</span>|||');
 				spans = line.split('|||');
 
-				each(spans, function (span) {
+				each(spans, function buildTextSpans(span) {
 					if (span !== '' || spans.length === 1) {
 						var attributes = {},
 							tspan = doc.createElementNS(SVG_NS, 'tspan'),
@@ -1653,7 +1650,7 @@ SVGRenderer.prototype = {
 				pos += increment;
 			}
 		}
-		console.log(finalPos, node.getSubStringLength(0, finalPos))
+		console.log('width', width, 'stringWidth', node.getSubStringLength(0, finalPos))
 	},
 	*/
 
@@ -1890,7 +1887,7 @@ SVGRenderer.prototype = {
 			};
 
 		if (strokeWidth !== UNDEFINED) {
-			attribs.strokeWidth = strokeWidth;
+			wrapper.strokeWidth = strokeWidth;
 			attribs = wrapper.crisp(attribs);
 		}
 
@@ -1898,8 +1895,8 @@ SVGRenderer.prototype = {
 			attribs.r = r;
 		}
 
-		wrapper.rSetter = function (value) {
-			attr(this.element, {
+		wrapper.rSetter = function (value, key, element) {
+			attr(element, {
 				rx: value,
 				ry: value
 			});
@@ -2091,7 +2088,7 @@ SVGRenderer.prototype = {
 						// Fire the load event when all external images are loaded
 						ren.imgCount--;
 						if (!ren.imgCount) {
-							charts[ren.chartIndex].onload(); // docs: Load and callback are now waiting for images
+							charts[ren.chartIndex].onload();
 						}
 					},
 					src: imageSrc

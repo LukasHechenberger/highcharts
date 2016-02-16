@@ -13,6 +13,7 @@ var colors = require('colors'),
     fs = require('fs'),
     // sass = require('gulp-sass'),
     ftp = require('vinyl-ftp'),
+    spawn = require('child_process').spawn,
     xml2js = require('xml2js');
 
 var paths = {
@@ -223,6 +224,7 @@ gulp.task('ftp-watch', function () {
     gulp.watch('./js/*/*.js', ['scripts', 'ftp']);
 });
 
+
 gulp.task('custom-build', function() {
   closureCompiler.compile(
     ['js/highcharts.src.js'],
@@ -233,6 +235,16 @@ gulp.task('custom-build', function() {
       }
     }
   );
+});
+
+/**
+ * Run the test suite. The task spawns a child process running PhantomJS.
+ */
+gulp.task('test', function () {
+    spawn('phantomjs', ['phantomtest.js'].concat(process.argv.slice(3)), {
+        cwd: 'utils/samples',
+        stdio: 'inherit'
+    });
 });
 
 gulp.task('filesize', function () {

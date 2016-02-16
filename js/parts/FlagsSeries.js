@@ -70,7 +70,7 @@ seriesTypes.flags = extendClass(seriesTypes.column, {
 			lastPoint,
 			optionsOnSeries = options.onSeries,
 			onSeries = optionsOnSeries && chart.get(optionsOnSeries),
-			onKey = options.onKey || 'y', // docs. Added to API, marked next.
+			onKey = options.onKey || 'y',
 			step = onSeries && onSeries.options.step,
 			onData = onSeries && onSeries.points,
 			i = onData && onData.length,
@@ -169,7 +169,8 @@ seriesTypes.flags = extendClass(seriesTypes.column, {
 			stackIndex,
 			anchorX,
 			anchorY,
-			outsideRight;
+			outsideRight,
+			yAxis = series.yAxis;
 
 		i = points.length;
 		while (i--) {
@@ -225,7 +226,7 @@ seriesTypes.flags = extendClass(seriesTypes.column, {
 				}
 
 				// Set the tooltip anchor position
-				point.tooltipPos = [plotX, plotY];
+				point.tooltipPos = chart.inverted ? [yAxis.len + yAxis.pos - chart.plotLeft - plotY, series.xAxis.len - plotX] : [plotX, plotY];
 
 			} else if (graphic) {
 				point.graphic = graphic.destroy();
