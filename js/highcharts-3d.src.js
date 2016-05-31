@@ -2,7 +2,7 @@
 // @compilation_level SIMPLE_OPTIMIZATIONS
 
 /**
- * @license Highcharts JS v4.2.3-modified (2016-02-11)
+ * @license Highcharts JS v4.2.5-modified (2016-05-30)
  *
  * 3D features for Highcharts JS
  *
@@ -480,7 +480,8 @@
         wrap(wrapper, 'animate', function (proceed, params, animation, complete) {
             var ca,
                 from = this.attribs,
-                to;
+                to,
+                anim;
 
             // Attribute-line properties connected to 3D. These shouldn't have been in the 
             // attribs collection in the first place.
@@ -490,15 +491,15 @@
             delete params.alpha;
             delete params.beta;
 
-            animation = animObject(pick(animation, this.renderer.globalAnimation));
+            anim = animObject(pick(animation, this.renderer.globalAnimation));
         
-            if (animation.duration) {
+            if (anim.duration) {
                 params = merge(params); // Don't mutate the original object
                 ca = suckOutCustom(params);
             
                 if (ca) {
                     to = ca;
-                    animation.step = function (a, fx) {
+                    anim.step = function (a, fx) {
                         function interpolate(key) {
                             return from[key] + (pick(to[key], from[key]) - from[key]) * fx.pos;
                         }
@@ -751,7 +752,7 @@
         proceed.apply(this, [].slice.call(arguments, 1));
 
         if (this.is3d()) {
-            if (options3d.fitToPlot === true) { // docs
+            if (options3d.fitToPlot === true) {
                 // Clear previous scale in case of updates:
                 chart.scale3d = 1;
 
@@ -1596,7 +1597,7 @@
                 // #4584 Check if has graphic - null points don't have it
                 if (graphic) {
                     // Hide null or 0 points (#3006, 3650)
-                    graphic[point.y ? 'show' : 'hide']();
+                    graphic[point.y && point.visible ? 'show' : 'hide']();
                 }
             });    
         }
@@ -1754,6 +1755,10 @@
             this.axisTypes = ['xAxis', 'yAxis', 'zAxis'];
             this.pointArrayMap = ['x', 'y', 'z'];
             this.parallelArrays = ['x', 'y', 'z'];
+
+            // Require direct touch rather than using the k-d-tree, because the k-d-tree currently doesn't
+            // take the xyz coordinate system into account (#4552)
+            this.directTouch = true;
         }
 
         var result = proceed.apply(this, [chart, options]);

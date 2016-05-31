@@ -232,6 +232,9 @@ Chart.prototype = {
 					redrawLegend = true;
 				}
 			}
+			if (serie.isDirtyData) {
+				fireEvent(serie, 'updatedData');
+			}
 		});
 
 		// handle added or removed series
@@ -458,6 +461,7 @@ Chart.prototype = {
 				})
 				.css(chartTitleOptions.style)
 				.add();
+			
 			}
 		});
 		chart.layOutTitles(redraw);
@@ -475,14 +479,14 @@ Chart.prototype = {
 			subtitleOptions = options.subtitle,
 			requiresDirtyBox,
 			renderer = this.renderer,
-			autoWidth = this.spacingBox.width - 44; // 44 makes room for default context button
+			spacingBox = this.spacingBox;
 
 		if (title) {
 			title
-				.css({ width: (titleOptions.width || autoWidth) + PX })
+				.css({ width: (titleOptions.width || spacingBox.width + titleOptions.widthAdjust) + PX })
 				.align(extend({
 					y: renderer.fontMetrics(titleOptions.style.fontSize, title).b - 3
-				}, titleOptions), false, 'spacingBox');
+				}, titleOptions), false, spacingBox);
 
 			if (!titleOptions.floating && !titleOptions.verticalAlign) {
 				titleOffset = title.getBBox().height;
@@ -490,10 +494,10 @@ Chart.prototype = {
 		}
 		if (subtitle) {
 			subtitle
-				.css({ width: (subtitleOptions.width || autoWidth) + PX })
+				.css({ width: (subtitleOptions.width || spacingBox.width + subtitleOptions.widthAdjust) + PX })
 				.align(extend({
 					y: titleOffset + (titleOptions.margin - 13) + renderer.fontMetrics(subtitleOptions.style.fontSize, title).b
-				}, subtitleOptions), false, 'spacingBox');
+				}, subtitleOptions), false, spacingBox);
 
 			if (!subtitleOptions.floating && !subtitleOptions.verticalAlign) {
 				titleOffset = mathCeil(titleOffset + subtitle.getBBox().height);
@@ -608,7 +612,7 @@ Chart.prototype = {
 		// attribute and the SVG contents, but not an interactive chart. So in this case,
 		// charts[oldChartIndex] will point to the wrong chart if any (#2609).
 		oldChartIndex = pInt(attr(renderTo, indexAttrName));
-		if (!isNaN(oldChartIndex) && charts[oldChartIndex] && charts[oldChartIndex].hasRendered) {
+		if (isNumber(oldChartIndex) && charts[oldChartIndex] && charts[oldChartIndex].hasRendered) {
 			charts[oldChartIndex].destroy();
 		}
 
@@ -693,7 +697,9 @@ Chart.prototype = {
 		}
 
 		// Adjust for legend
-		chart.legend.adjustMargins(margin, spacing);
+		if (chart.legend.display) {
+			chart.legend.adjustMargins(margin, spacing);
+		}
 
 		// adjust for scroller
 		if (chart.extraBottomMargin) {
@@ -1402,7 +1408,7 @@ Chart.prototype = {
 		chart.renderer.draw();
 
 		// Fire the load event if there are no external images
-		if (!chart.renderer.imgCount) {
+		if (!chart.renderer.imgCount && chart.onload) {
 			chart.onload();
 		}
 
@@ -1424,10 +1430,10 @@ Chart.prototype = {
 			}
 		});
 
-		// Fire the load event if there are no external images
-		if (!chart.renderer.imgCount) {
-			fireEvent(chart, 'load');
-		}
+		fireEvent(chart, 'load');
+
+		// Don't run again
+		this.onload = null;
 	},
 
 	/**

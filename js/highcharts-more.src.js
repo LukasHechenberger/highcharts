@@ -2,7 +2,7 @@
 // @compilation_level SIMPLE_OPTIMIZATIONS
 
 /**
- * @license Highcharts JS v4.2.3-modified (2016-02-08)
+ * @license Highcharts JS v4.2.5-modified (2016-05-27)
  *
  * (c) 2009-2016 Torstein Honsi
  *
@@ -20,6 +20,7 @@ var arrayMin = Highcharts.arrayMin,
         arrayMax = Highcharts.arrayMax,
         each = Highcharts.each,
         extend = Highcharts.extend,
+        isNumber = Highcharts.isNumber,
         merge = Highcharts.merge,
         map = Highcharts.map,
         pick = Highcharts.pick,
@@ -525,6 +526,12 @@ var arrayMin = Highcharts.arrayMin,
 
         }
 
+        // Disable certain features on angular and polar axes
+        if (angular || polar) {
+            chart.inverted = false;
+            chartOptions.chart.zoomType = null;
+        }
+
         // Run prototype.init
         proceed.call(this, chart, userOptions);
 
@@ -541,11 +548,6 @@ var arrayMin = Highcharts.arrayMin,
                 axis
             );
             paneOptions = pane.options;
-
-
-            // Disable certain features on angular and polar axes
-            chart.inverted = false;
-            chartOptions.chart.zoomType = null;
 
             // Start and end angle options are
             // given in degrees relative to top, while internal computations are
@@ -820,6 +822,8 @@ var arrayMin = Highcharts.arrayMin,
             if (!this.chart.polar && higherAreaPath[0] === 'M') {
                 higherAreaPath[0] = 'L'; // this probably doesn't work for spline        
             }
+
+            this.graphPath = linePath;
             this.areaPath = this.areaPath.concat(lowerPath, higherAreaPath);
             return linePath;
         },
@@ -972,7 +976,10 @@ var arrayMin = Highcharts.arrayMin,
                 var series = this,
                     yAxis = series.yAxis,
                     xAxis = series.xAxis,
+                    startAngleRad = xAxis.startAngleRad,
+                    start,
                     chart = series.chart,
+                    isRadial = series.xAxis.isRadial,
                     plotHigh;
 
                 colProto.translate.apply(series);
@@ -990,7 +997,7 @@ var arrayMin = Highcharts.arrayMin,
 
                     // adjust shape
                     y = plotHigh;
-                    height = point.plotY - plotHigh;
+                    height = pick(point.rectPlotY, point.plotY) - plotHigh;
 
                     // Adjust for minPointLength
                     if (Math.abs(height) < minPointLength) {
@@ -1004,19 +1011,28 @@ var arrayMin = Highcharts.arrayMin,
                         y -= height;
                     }
 
-                    shapeArgs.height = height;
-                    shapeArgs.y = y;
+                    if (isRadial) {
 
-                    point.tooltipPos = chart.inverted ? 
-                        [ 
-                            yAxis.len + yAxis.pos - chart.plotLeft - y - height / 2, 
-                            xAxis.len + xAxis.pos - chart.plotTop - shapeArgs.x - shapeArgs.width / 2, 
-                            height
-                        ] : [
-                            xAxis.left - chart.plotLeft + shapeArgs.x + shapeArgs.width / 2, 
-                            yAxis.pos - chart.plotTop + y + height / 2, 
-                            height
-                        ]; // don't inherit from column tooltip position - #3372
+                        start = point.barX + startAngleRad;
+                        point.shapeType = 'path';
+                        point.shapeArgs = {
+                            d: series.polarArc(y + height, y, start, start + point.pointWidth)
+                        };
+                    } else {
+                        shapeArgs.height = height;
+                        shapeArgs.y = y;
+
+                        point.tooltipPos = chart.inverted ? 
+                            [ 
+                                yAxis.len + yAxis.pos - chart.plotLeft - y - height / 2, 
+                                xAxis.len + xAxis.pos - chart.plotTop - shapeArgs.x - shapeArgs.width / 2, 
+                                height
+                            ] : [
+                                xAxis.left - chart.plotLeft + shapeArgs.x + shapeArgs.width / 2, 
+                                yAxis.pos - chart.plotTop + y + height / 2, 
+                                height
+                            ]; // don't inherit from column tooltip position - #3372
+                    }
                 });
             },
             directTouch: true,
@@ -1026,8 +1042,13 @@ var arrayMin = Highcharts.arrayMin,
             pointAttrToOptions: colProto.pointAttrToOptions,
             drawPoints: colProto.drawPoints,
             drawTracker: colProto.drawTracker,
-            animate: colProto.animate,
-            getColumnMetrics: colProto.getColumnMetrics
+            getColumnMetrics: colProto.getColumnMetrics,
+            animate: function () {
+                return colProto.animate.apply(this, arguments);
+            },
+            polarArc: function () {
+                return colProto.polarArc.apply(this, arguments);
+            }
         });
     }());
 
@@ -1097,6 +1118,7 @@ var arrayMin = Highcharts.arrayMin,
         // chart.angular will be set to true when a gauge series is present, and this will
         // be used on the axes
         angular: true,
+        directTouch: true, // #5063
         drawGraph: noop,
         fixedBox: true,
         forceDL: true,
@@ -1126,7 +1148,7 @@ var arrayMin = Highcharts.arrayMin,
                     rotation = yAxis.startAngleRad + yAxis.translate(point.y, null, null, null, true);
 
                 // Handle the wrap and overshoot options
-                if (overshoot && typeof overshoot === 'number') {
+                if (isNumber(overshoot)) {
                     overshoot = overshoot / 180 * Math.PI;
                     rotation = Math.max(yAxis.startAngleRad - overshoot, Math.min(yAxis.endAngleRad + overshoot, rotation));
 
@@ -1860,8 +1882,19 @@ var arrayMin = Highcharts.arrayMin,
      */
     defaultPlotOptions.polygon = merge(defaultPlotOptions.scatter, {
         marker: {
-            enabled: false
-        }
+            enabled: false,
+            states: {
+                hover: {
+                    enabled: false
+                }
+            }
+        },
+        stickyTracking: false,
+        tooltip: {
+            followPointer: true,
+            pointFormat: ''
+        },
+        trackByArea: true
     });
 
     /**
@@ -1869,13 +1902,24 @@ var arrayMin = Highcharts.arrayMin,
      */
     seriesTypes.polygon = extendClass(seriesTypes.scatter, {
         type: 'polygon',
-        fillGraph: true,
-        // Close all segments
-        getSegmentPath: function (segment) {
-            return Series.prototype.getSegmentPath.call(this, segment).concat('z');
+        getGraphPath: function () {
+
+            var graphPath = Series.prototype.getGraphPath.call(this),
+                i = graphPath.length + 1;
+
+            // Close all segments
+            while (i--) {
+                if (i === graphPath.length || (graphPath[i] === 'M' && i > 0)) {
+                    graphPath.splice(i, 0, 'z');
+                }
+            }
+
+            this.areaPath = graphPath;
+            return graphPath;
         },
-        drawGraph: Series.prototype.drawGraph,
-        drawLegendSymbol: Highcharts.LegendSymbolMixin.drawRectangle
+        drawGraph: seriesTypes.area.prototype.drawGraph,
+        drawTracker: Series.prototype.drawTracker,
+        setStackedPoints: noop // No stacking points on polygons (#5310)
     });
     /* ****************************************************************************
      * Start Bubble series code                                                      *
@@ -2067,7 +2111,7 @@ var arrayMin = Highcharts.arrayMin,
                 point = data[i];
                 radius = radii ? radii[i] : 0; // #1737
 
-                if (typeof radius === 'number' && radius >= this.minPxSize / 2) {
+                if (isNumber(radius) && radius >= this.minPxSize / 2) {
                     // Shape arguments
                     point.shapeType = 'circle';
                     point.shapeArgs = {
@@ -2195,7 +2239,7 @@ var arrayMin = Highcharts.arrayMin,
 
             if (range > 0) {
                 while (i--) {
-                    if (typeof data[i] === 'number') {
+                    if (isNumber(data[i]) && axis.dataMin <= data[i] && data[i] <= axis.dataMax) {
                         radius = series.radii[i];
                         pxMin = Math.min(((data[i] - min) * transA) - radius, pxMin);
                         pxMax = Math.max(((data[i] - min) * transA) + radius, pxMax);
@@ -2441,8 +2485,8 @@ var arrayMin = Highcharts.arrayMin,
             // Connect the path
             if (this.chart.polar) {
                 points = points || this.points;
-    
-                if (this.options.connectEnds !== false && points[0].y !== null) {
+
+                if (this.options.connectEnds !== false && points[0] && points[0].y !== null) {
                     this.connectEnds = true; // re-used in splines
                     points.splice(points.length, 0, points[0]);
                 }
@@ -2530,6 +2574,24 @@ var arrayMin = Highcharts.arrayMin,
         if (seriesTypes.column) {
 
             colProto = seriesTypes.column.prototype;
+
+            colProto.polarArc = function (low, high, start, end) {
+                var center = this.xAxis.center,
+                    len = this.yAxis.len;
+                
+                return this.chart.renderer.symbols.arc(
+                    center[0],
+                    center[1],
+                    len - high,
+                    null,
+                    {
+                        start: start,
+                        end: end,
+                        innerR: len - pick(low, len)
+                    }
+                );
+            };
+
             /**
             * Define the animate method for columnseries
             */
@@ -2542,10 +2604,7 @@ var arrayMin = Highcharts.arrayMin,
             wrap(colProto, 'translate', function (proceed) {
 
                 var xAxis = this.xAxis,
-                    len = this.yAxis.len,
-                    center = xAxis.center,
                     startAngleRad = xAxis.startAngleRad,
-                    renderer = this.chart.renderer,
                     start,
                     points,
                     point,
@@ -2565,22 +2624,12 @@ var arrayMin = Highcharts.arrayMin,
                         start = point.barX + startAngleRad;
                         point.shapeType = 'path';
                         point.shapeArgs = {
-                            d: renderer.symbols.arc(
-                                center[0],
-                                center[1],
-                                len - point.plotY,
-                                null,
-                                {
-                                    start: start,
-                                    end: start + point.pointWidth,
-                                    innerR: len - pick(point.yBottom, len)
-                                }
-                            )
+                            d: this.polarArc(point.yBottom, point.plotY, start, start + point.pointWidth)
                         };
                         // Provide correct plotX, plotY for tooltip
                         this.toXY(point);
                         point.tooltipPos = [point.plotX, point.plotY];
-                        point.ttBelow = point.plotY > center[1];
+                        point.ttBelow = point.plotY > xAxis.center[1];
                     }
                 }
             });

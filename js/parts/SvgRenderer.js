@@ -333,7 +333,7 @@ SVGElement.prototype = {
 
 		while (i--) {
 			setter.call(
-				null, 
+				shadows[i], 
 				key === 'height' ?
 					Math.max(value - (shadows[i].cutHeight || 0), 0) :
 					key === 'd' ? this.d : value, 
@@ -1066,7 +1066,14 @@ SVGElement.prototype = {
 		this[key] = value;
 	},
 	dashstyleSetter: function (value) {
-		var i;
+		var i,
+			strokeWidth = this['stroke-width'];
+		
+		// If "inherit", like maps in IE, assume 1 (#4981). With HC5 and the new strokeWidth 
+		// function, we should be able to use that instead.
+		if (strokeWidth === 'inherit') {
+			strokeWidth = 1;
+		}
 		value = value && value.toLowerCase();
 		if (value) {
 			value = value
@@ -1082,10 +1089,10 @@ SVGElement.prototype = {
 
 			i = value.length;
 			while (i--) {
-				value[i] = pInt(value[i]) * this['stroke-width'];
+				value[i] = pInt(value[i]) * strokeWidth;
 			}
 			value = value.join(',')
-				.replace('NaN', 'none'); // #3226
+				.replace(/NaN/g, 'none'); // #3226
 			this.element.setAttribute('stroke-dasharray', value);
 		}
 	},
@@ -1102,6 +1109,12 @@ SVGElement.prototype = {
 			titleNode = doc.createElementNS(SVG_NS, 'title');
 			this.element.appendChild(titleNode);
 		}
+
+		// Remove text content if it exists
+		if (titleNode.firstChild) {
+			titleNode.removeChild(titleNode.firstChild);
+		}
+
 		titleNode.appendChild(
 			doc.createTextNode(
 				(String(pick(value), '')).replace(/<[^>]*>/g, '') // #3276, #3895
@@ -1148,7 +1161,7 @@ SVGElement.prototype = {
 			i;
 
 		if (defined(value)) {
-			element.setAttribute(key, value); // So we can read it for other elements in the group
+			element.zIndex = value; // So we can read it for other elements in the group
 			value = +value;
 			if (this[key] === value) { // Only update when needed (#3865)
 				run = false;
@@ -1169,7 +1182,7 @@ SVGElement.prototype = {
 			childNodes = parentNode.childNodes;
 			for (i = 0; i < childNodes.length && !inserted; i++) {
 				otherElement = childNodes[i];
-				otherZIndex = attr(otherElement, 'zIndex');
+				otherZIndex = otherElement.zIndex;
 				if (otherElement !== element && (
 						// Insert before the first element with a higher zIndex
 						pInt(otherZIndex) > value ||
@@ -1397,6 +1410,7 @@ SVGRenderer.prototype = {
 			childNodes = textNode.childNodes,
 			styleRegex,
 			hrefRegex,
+			wasTooLong,
 			parentX = attr(textNode, 'x'),
 			textStyles = wrapper.styles,
 			width = wrapper.textWidth,
@@ -1426,7 +1440,7 @@ SVGRenderer.prototype = {
 
 		// Skip tspans, add text directly to text node. The forceTSpan is a hook
 		// used in text outline hack.
-		if (!hasMarkup && !textShadow && !ellipsis && textStr.indexOf(' ') === -1) {
+		if (!hasMarkup && !textShadow && !ellipsis && !width && textStr.indexOf(' ') === -1) {
 			textNode.appendChild(doc.createTextNode(unescapeAngleBrackets(textStr)));
 
 		// Complex strings, add more logic
@@ -1452,17 +1466,20 @@ SVGRenderer.prototype = {
 			}
 
 
-			// remove empty line at end
-			if (lines[lines.length - 1] === '') {
-				lines.pop();
-			}
+			// Trim empty lines (#5261)
+			lines = grep(lines, function (line) {
+				return line !== '';
+			});
 
 
 			// build the lines
 			each(lines, function buildTextLines(line, lineNo) {
-				var spans, spanNo = 0;
-
-				line = line.replace(/<span/g, '|||<span').replace(/<\/span>/g, '</span>|||');
+				var spans,
+					spanNo = 0;
+				line = line
+					.replace(/^\s+|\s+$/g, '') // Trim to prevent useless/costly process on the spaces (#5258)
+					.replace(/<span/g, '|||<span')
+					.replace(/<\/span>/g, '</span>|||');
 				spans = line.split('|||');
 
 				each(spans, function buildTextSpans(span) {
@@ -1527,7 +1544,6 @@ SVGRenderer.prototype = {
 								var words = span.replace(/([^\^])-/g, '$1- ').split(' '), // #1273
 									hasWhiteSpace = spans.length > 1 || lineNo || (words.length > 1 && textStyles.whiteSpace !== 'nowrap'),
 									tooLong,
-									wasTooLong,
 									actualWidth,
 									rest = [],
 									dy = getLineHeight(tspan),
@@ -1559,9 +1575,6 @@ SVGRenderer.prototype = {
 										if (wordStr === '' || (!tooLong && cursor < 0.5)) {
 											words = []; // All ok, break out
 										} else {
-											if (tooLong) {
-												wasTooLong = true;
-											}
 											wordStr = span.substring(0, wordStr.length + (tooLong ? -1 : 1) * mathCeil(cursor));
 											words = [wordStr + (width > 3 ? '\u2026' : '')];
 											tspan.removeChild(tspan.firstChild);
@@ -1597,9 +1610,6 @@ SVGRenderer.prototype = {
 										tspan.appendChild(doc.createTextNode(words.join(' ').replace(/- /g, '-')));
 									}
 								}
-								if (wasTooLong) {
-									wrapper.attr('title', wrapper.textStr);
-								}
 								wrapper.rotation = rotation;
 							}
 
@@ -1608,6 +1618,10 @@ SVGRenderer.prototype = {
 					}
 				});
 			});
+
+			if (wasTooLong) {
+				wrapper.attr('title', wrapper.textStr);
+			}
 			if (tempParent) {
 				tempParent.removeChild(textNode); // attach it to the DOM to read offset width
 			}
@@ -2087,14 +2101,14 @@ SVGRenderer.prototype = {
 
 						// Fire the load event when all external images are loaded
 						ren.imgCount--;
-						if (!ren.imgCount) {
+						if (!ren.imgCount && charts[ren.chartIndex].onload) {
 							charts[ren.chartIndex].onload();
 						}
 					},
 					src: imageSrc
 				});
+				this.imgCount++;
 			}
-			this.imgCount++;
 		}
 
 		return obj;
@@ -2439,8 +2453,7 @@ SVGRenderer.prototype = {
 					// create the border box if it is not already present
 					boxX = crispAdjust;
 					boxY = (baseline ? -baselineOffset : 0) + crispAdjust;
-
-					wrapper.box = box = shape ?
+					wrapper.box = box = renderer.symbols[shape] ? // Symbol definition exists (#5324)
 							renderer.symbol(shape, boxX, boxY, wrapper.width, wrapper.height, deferredAttr) :
 							renderer.rect(boxX, boxY, wrapper.width, wrapper.height, 0, deferredAttr[STROKE_WIDTH]);
 
@@ -2555,7 +2568,7 @@ SVGRenderer.prototype = {
 			if (value !== alignFactor) {
 				alignFactor = value;
 				if (bBox) { // Bounding box exists, means we're dynamically changing
-					wrapper.attr({ x: x });
+					wrapper.attr({ x: wrapperX }); // #5134
 				}
 			}
 		};

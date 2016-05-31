@@ -39,16 +39,17 @@ extend(Chart.prototype, {
      */
 	addAxis: function (options, isX, redraw, animation) {
 		var key = isX ? 'xAxis' : 'yAxis',
-			chartOptions = this.options;
+			chartOptions = this.options,
+			userOptions = merge(options, {
+				index: this[key].length,
+				isX: isX
+			});
 
-		new Axis(this, merge(options, { // eslint-disable-line no-new
-			index: this[key].length,
-			isX: isX
-		}));
+		new Axis(this, userOptions); // eslint-disable-line no-new
 
 		// Push the new axis options to the chart options
 		chartOptions[key] = splat(chartOptions[key] || {});
-		chartOptions[key].push(options);
+		chartOptions[key].push(userOptions);
 
 		if (pick(redraw, true)) {
 			this.redraw(animation);
@@ -187,7 +188,7 @@ extend(Point.prototype, {
 
 			// Record the options to options.data. If there is an object from before,
 			// use point options, otherwise use raw options. (#4701)
-			seriesOptions.data[i] = isObject(seriesOptions.data[i]) ? point.options : options;
+			seriesOptions.data[i] =  (isObject(seriesOptions.data[i]) && !isArray(seriesOptions.data[i])) ? point.options : options;
 
 			// redraw
 			series.isDirty = series.isDirtyData = true;
@@ -459,7 +460,6 @@ extend(Axis.prototype, {
 		newOptions = chart.options[this.coll][this.options.index] = merge(this.userOptions, newOptions);
 
 		this.destroy(true);
-		this._addedPlotLB = this.chart._labelPanes = UNDEFINED; // #1611, #2887, #4314
 
 		this.init(chart, extend(newOptions, { events: UNDEFINED }));
 

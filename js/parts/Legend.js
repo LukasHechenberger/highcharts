@@ -378,7 +378,7 @@ Legend.prototype = {
 			// Use the first letter of each alignment option in order to detect the side
 			alignment = options.align.charAt(0) + options.verticalAlign.charAt(0) + options.layout.charAt(0); // #4189 - use charAt(x) notation instead of [x] for IE7
 
-		if (this.display && !options.floating) {
+		if (!options.floating) {
 
 			each([
 				/(lth|ct|rth)/,
@@ -575,7 +575,7 @@ Legend.prototype = {
 
 		// Reset the legend height and adjust the clipping rectangle
 		pages.length = 0;
-		if (legendHeight > spaceHeight) {
+		if (legendHeight > spaceHeight && navOptions.enabled !== false) {
 
 			this.clipHeight = clipHeight = mathMax(spaceHeight - 20 - this.titleHeight - padding, 0);
 			this.currentPage = pick(this.currentPage, 1);

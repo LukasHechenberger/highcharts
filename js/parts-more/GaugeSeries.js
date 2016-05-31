@@ -64,6 +64,7 @@ var GaugeSeries = {
 	// chart.angular will be set to true when a gauge series is present, and this will
 	// be used on the axes
 	angular: true,
+	directTouch: true, // #5063
 	drawGraph: noop,
 	fixedBox: true,
 	forceDL: true,
@@ -93,7 +94,7 @@ var GaugeSeries = {
 				rotation = yAxis.startAngleRad + yAxis.translate(point.y, null, null, null, true);
 
 			// Handle the wrap and overshoot options
-			if (overshoot && typeof overshoot === 'number') {
+			if (isNumber(overshoot)) {
 				overshoot = overshoot / 180 * Math.PI;
 				rotation = Math.max(yAxis.startAngleRad - overshoot, Math.min(yAxis.endAngleRad + overshoot, rotation));
 

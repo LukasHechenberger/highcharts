@@ -123,6 +123,7 @@ $compare = @json_decode(file_get_contents('temp/compare.json'));
 
 			body {
 				background: #F6F6F6;
+				padding-right: 1em;
 			}
 
 			li, a, p, div, span {
@@ -203,7 +204,7 @@ $compare = @json_decode(file_get_contents('temp/compare.json'));
 			}
 			.comment {
 				position: absolute;
-				right: 3em;
+				right: 4em;
 			}
 			.comment-title {
 				display: none;
@@ -283,7 +284,7 @@ $compare = @json_decode(file_get_contents('temp/compare.json'));
 		Showing only failed samples. Click "Fails only" again to change.
 	</div>
 	<?php
-	$products = array('unit-tests', 'highcharts', 'maps', 'stock', 'issues');
+	$products = array('highcharts', 'maps', 'stock', 'unit-tests', 'issues', 'cloud');
 	$samplesDir = dirname(__FILE__). '/../../samples/';
 	
 
@@ -323,17 +324,20 @@ $compare = @json_decode(file_get_contents('temp/compare.json'));
 								// Display diff from previous comparison
 								$compareIcon = $isUnitTest ? 'icon-puzzle-piece' : 'icon-columns';
 								$dissIndex = "
-									<a class='dissimilarity-index' href='compare-view.php?path=$path&amp;i=$i' target='main'><i class='$compareIcon'></i></a>
+									<a class='dissimilarity-index' href='compare-view.php?path=$path&amp;i=$i' target='main'>
+										<i class='$compareIcon'></i></a>
 								";
 								if (isset($compare->$path->$browserKey)) {
 									$diff = $compare->$path->$browserKey;
-									if ($diff > 0 || $diff == 'Error') {
+									if (!preg_match('/^[0-9\\.]+$/', $diff) || $diff > 0) {
 										if (strstr($diff, '.')) {
 											$diff = round($diff, 2);
 										}
 										$compareClass = 'different';
+										$dummy = mktime();
 										$dissIndex = "
-											<a class='dissimilarity-index' href='compare-view.php?path=$path&amp;i=$i' target='main' data-diff='$diff'>$diff</a>
+											<a class='dissimilarity-index' href='compare-view.php?path=$path&amp;i=$i&amp;dummy=$dummy'
+												target='main' data-diff='$diff'>$diff</a>
 										";
 									} else {
 										$compareClass = 'identical';
