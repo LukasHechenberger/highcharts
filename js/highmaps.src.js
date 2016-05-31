@@ -9684,7 +9684,7 @@
 
             // Get mouse position
             if (!chartPosition) {
-                this.chartPosition = chartPosition = offset(this.chart.container);
+                this.chartPosition = chartPosition = offset(this.chart.container.childNodes[0]);
             }
 
             // chartX and chartY
@@ -9886,7 +9886,7 @@
                     }
                 });
             }
-        
+
             // Just move the tooltip, #349
             if (allowMove) {
                 if (tooltip && tooltipPoints) {
@@ -10299,6 +10299,7 @@
             addEvent(container, 'mouseleave', pointer.onContainerMouseLeave);
             if (chartCount === 1) {
                 addEvent(doc, 'mouseup', pointer.onDocumentMouseUp);
+                addEvent(container, 'mouseup', pointer.onDocumentMouseUp);
             }
             if (hasTouch) {
                 container.ontouchstart = function (e) {
@@ -10309,6 +10310,7 @@
                 };
                 if (chartCount === 1) {
                     addEvent(doc, 'touchend', pointer.onDocumentTouchEnd);
+                    addEvent(container, 'touchend', pointer.onDocumentTouchEnd);
                 }
             }
 
@@ -10334,8 +10336,6 @@
             }
         }
     };
-
-
     /* Support for touch devices */
     extend(Highcharts.Pointer.prototype, {
 

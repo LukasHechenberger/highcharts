@@ -358,7 +358,7 @@ Navigator.prototype = {
 		_events = [
 			[container, 'mousedown', mouseDownHandler],
 			[container, 'mousemove', mouseMoveHandler],
-			[doc, 'mouseup', mouseUpHandler]
+			[container, 'mouseup', mouseUpHandler]
 		];
 
 		// Touch events
@@ -366,7 +366,7 @@ Navigator.prototype = {
 			_events.push(
 				[container, 'touchstart', mouseDownHandler],
 				[container, 'touchmove', mouseMoveHandler],
-				[doc, 'touchend', mouseUpHandler]
+				[container, 'touchend', mouseUpHandler]
 			);
 		}
 
