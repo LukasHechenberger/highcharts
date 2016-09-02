@@ -1039,7 +1039,7 @@ each = function (arr, fn) { // modern browsers
  * Add an event listener
  */
 addEvent = function (el, type, fn) {
-	
+
 	var events = el.hcEvents = el.hcEvents || {};
 
 	function wrappedFn(e) {
