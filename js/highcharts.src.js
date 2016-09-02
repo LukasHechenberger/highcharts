@@ -72,7 +72,7 @@
         NONE = 'none',
         M = 'M',
         L = 'L',
-        numRegex = /^[0-9]+$/,
+        numRegex = /[0-9]/g,
         NORMAL_STATE = '',
         HOVER_STATE = 'hover',
         SELECT_STATE = 'select',
@@ -304,57 +304,83 @@
          */
         initPath: function (elem, fromD, toD) {
             fromD = fromD || '';
-            var shift = elem.shift,
+            var shift,
+                startX = elem.startX,
+                endX = elem.endX,
                 bezier = fromD.indexOf('C') > -1,
                 numParams = bezier ? 7 : 3,
-                endLength,
+                fullLength,
                 slice,
                 i,
                 start = fromD.split(' '),
-                end = [].concat(toD), // copy
+                end = toD.slice(), // copy
                 isArea = elem.isArea,
                 positionFactor = isArea ? 2 : 1,
-                sixify = function (arr) { // in splines make move points have six parameters like bezier curves
-                    i = arr.length;
-                    while (i--) {
-                        if (arr[i] === M || arr[i] === L) {
-                            arr.splice(i + 1, 0, arr[i + 1], arr[i + 2], arr[i + 1], arr[i + 2]);
-                        }
-                    }
-                };
-
-            if (bezier) {
-                sixify(start);
-                sixify(end);
-            }
-
-            // If shifting points, prepend a dummy point to the end path. For areas,
-            // prepend both at the beginning and end of the path.
-            if (shift <= end.length / numParams && start.length === end.length) {
-                while (shift--) {
-                    end = end.slice(0, numParams).concat(end);
-                    if (isArea) {
-                        end = end.concat(end.slice(end.length - numParams));
+                reverse;
+        
+            /**
+             * In splines make move points have six parameters like bezier curves
+             */
+            function sixify(arr) {
+                i = arr.length;
+                while (i--) {
+                    if (arr[i] === M || arr[i] === L) {
+                        arr.splice(i + 1, 0, arr[i + 1], arr[i + 2], arr[i + 1], arr[i + 2]);
                     }
                 }
             }
-            elem.shift = 0; // reset for following animations
 
-        
-            // Copy and append last point until the length matches the end length
-            if (start.length) {
-                endLength = end.length;
-                while (start.length < endLength) {
+            /**
+             * Insert an array at the given position of another array
+             */
+            function insertSlice(arr, subArr, index) {
+                [].splice.apply(
+                    arr,
+                    [index, 0].concat(subArr)
+                );
+            }
+
+            /**
+             * If shifting points, prepend a dummy point to the end path. 
+             */
+            function prepend(arr, other) {
+                while (arr.length < fullLength) {
+                
+                    // Move to, line to or curve to?
+                    arr[0] = other[fullLength - arr.length];
+
+                    // Prepend a copy of the first point
+                    insertSlice(arr, arr.slice(0, numParams), 0);
+
+                    // For areas, the bottom path goes back again to the left, so we need
+                    // to append a copy of the last point.
+                    if (isArea) {
+                        insertSlice(arr, arr.slice(arr.length - numParams), arr.length);
+                        i--;
+                    }
+                }
+                arr[0] = 'M';
+            }
+
+            /**
+             * Copy and append last point until the length matches the end length
+             */
+            function append(arr, other) {
+                var i = (fullLength - arr.length) / numParams;
+                while (i > 0 && i--) {
 
                     // Pull out the slice that is going to be appended or inserted. In a line graph,
                     // the positionFactor is 1, and the last point is sliced out. In an area graph,
                     // the positionFactor is 2, causing the middle two points to be sliced out, since
                     // an area path starts at left, follows the upper path then turns and follows the
                     // bottom back. 
-                    slice = start.slice().splice(
-                        (start.length / positionFactor) - numParams, 
+                    slice = arr.slice().splice(
+                        (arr.length / positionFactor) - numParams, 
                         numParams * positionFactor
                     );
+
+                    // Move to, line to or curve to?
+                    slice[0] = other[fullLength - numParams - (i * numParams)];
                 
                     // Disable first control point
                     if (bezier) {
@@ -363,11 +389,49 @@
                     }
                 
                     // Now insert the slice, either in the middle (for areas) or at the end (for lines)
-                    [].splice.apply(
-                        start, 
-                        [(start.length / positionFactor), 0].concat(slice)
-                    );
+                    insertSlice(arr, slice, arr.length / positionFactor);
 
+                    if (isArea) {
+                        i--;
+                    }
+                }
+            }
+
+            if (bezier) {
+                sixify(start);
+                sixify(end);
+            }
+
+            // For sideways animation, find out how much we need to shift to get the start path Xs
+            // to match the end path Xs.
+            if (startX && endX) {
+                for (i = 0; i < startX.length; i++) {
+                    if (startX[i] === endX[0]) { // Moving left, new points coming in on right
+                        shift = i;
+                        break;
+                    } else if (startX[0] === endX[endX.length - startX.length + i]) { // Moving right
+                        shift = i;
+                        reverse = true;
+                        break;
+                    }
+                }
+                if (shift === undefined) {
+                    start = [];
+                }
+            }
+
+            if (start.length && Highcharts.isNumber(shift)) {
+
+                // The common target length for the start and end array, where both 
+                // arrays are padded in opposite ends
+                fullLength = end.length + shift * positionFactor * numParams;
+            
+                if (!reverse) {
+                    prepend(end, start);
+                    append(start, end);
+                } else {
+                    prepend(start, end);
+                    append(end, start);
                 }
             }
 
@@ -463,20 +527,22 @@
     }
 
     /**
-     * Check for object
-     * @param {Object} obj
-     */
-    function isObject(obj) {
-        return obj && typeof obj === 'object';
-    }
-
-    /**
      * Check for array
      * @param {Object} obj
      */
     function isArray(obj) {
         return Object.prototype.toString.call(obj) === '[object Array]';
     }
+
+    /**
+     * Check for object
+     * @param {Object} obj
+     * @param {Boolean} strict Also checks that the object is not an array
+     */
+    var isObject = Highcharts.isObject = function (obj, strict) {
+        //debugger;
+        return obj && typeof obj === 'object' && (!strict || !isArray(obj));
+    };
 
     /**
      * Check for number
@@ -1581,7 +1647,9 @@
                     y: 10
                 }
                 // relativeTo: 'plot'
-            }
+            },
+            width: null,
+            height: null
         },
         title: {
             text: 'Chart title',
@@ -2803,19 +2871,16 @@
 
             if (textStr !== UNDEFINED) {
 
-                // Properties that affect bounding box
-                cacheKey = ['', rotation || 0, styles && styles.fontSize, element.style.width].join(',');
+                cacheKey = 
 
-                // Since numbers are monospaced, and numerical labels appear a lot in a chart,
-                // we assume that a label of n characters has the same bounding box as others
-                // of the same length.
-                if (textStr === '' || numRegex.test(textStr)) {
-                    cacheKey = 'num:' + textStr.toString().length + cacheKey;
+                    // Since numbers are monospaced, and numerical labels appear a lot in a chart,
+                    // we assume that a label of n characters has the same bounding box as others
+                    // of the same length.
+                    textStr.toString().replace(numRegex, '0') + 
 
-                // Caching all strings reduces rendering time by 4-5%.
-                } else {
-                    cacheKey = textStr + cacheKey;
-                }
+                    // Properties that affect bounding box
+                    ['', rotation || 0, styles && styles.fontSize, element.style.width].join(',');
+
             }
 
             if (cacheKey && !reload) {
@@ -2895,8 +2960,9 @@
                     }
                 }
 
-                // Cache it
-                if (cacheKey) {
+                // Cache it. When loading a chart in a hidden iframe in Firefox and IE/Edge, the
+                // bounding box height is 0, so don't cache it (#5620).
+                if (cacheKey && bBox.height > 0) {
 
                     // Rotate (#4681)
                     while (cacheKeys.length > 250) {
@@ -3312,7 +3378,7 @@
     };
     SVGRenderer.prototype = {
         Element: SVGElement,
-
+        urlSymbolRX: /^url\((.*?)\)$/,
         /**
          * Initialize the SVGRenderer
          * @param {Object} container
@@ -4091,7 +4157,6 @@
                     options
                 ),
 
-                imageRegex = /^url\((.*?)\)$/,
                 imageSrc,
                 imageSize,
                 centerImage;
@@ -4113,7 +4178,7 @@
 
 
             // image symbols
-            } else if (imageRegex.test(symbol)) {
+            } else if (this.urlSymbolRX.test(symbol)) {
 
                 // On image load, set the size and position
                 centerImage = function (img, size) {
@@ -4132,7 +4197,7 @@
                     }
                 };
 
-                imageSrc = symbol.match(imageRegex)[1];
+                imageSrc = symbol.match(this.urlSymbolRX)[1];
                 imageSize = symbolSizes[imageSrc] || (options && options.width && options.height && [options.width, options.height]);
 
                 // Ireate the image synchronously, add attribs async
@@ -4154,6 +4219,8 @@
                     createElement('img', {
                         onload: function () {
 
+                            var chart = charts[ren.chartIndex];
+
                             // Special case for SVGs on IE11, the width is not accessible until the image is
                             // part of the DOM (#2854).
                             if (this.width === 0) {
@@ -4174,8 +4241,8 @@
 
                             // Fire the load event when all external images are loaded
                             ren.imgCount--;
-                            if (!ren.imgCount && charts[ren.chartIndex].onload) {
-                                charts[ren.chartIndex].onload();
+                            if (!ren.imgCount && chart && chart.onload) {
+                                chart.onload();
                             }
                         },
                         src: imageSrc
@@ -4496,7 +4563,8 @@
                 crispAdjust = 0,
                 deferredAttr = {},
                 baselineOffset,
-                needsBox,
+                hasBGImage = renderer.urlSymbolRX.test(shape),
+                needsBox = hasBGImage,
                 updateBoxSize,
                 updateTextPadding,
                 boxAttr;
@@ -4526,7 +4594,7 @@
                         // create the border box if it is not already present
                         boxX = crispAdjust;
                         boxY = (baseline ? -baselineOffset : 0) + crispAdjust;
-                        wrapper.box = box = renderer.symbols[shape] ? // Symbol definition exists (#5324)
+                        wrapper.box = box = renderer.symbols[shape] || hasBGImage ? // Symbol definition exists (#5324)
                                 renderer.symbol(shape, boxX, boxY, wrapper.width, wrapper.height, deferredAttr) :
                                 renderer.rect(boxX, boxY, wrapper.width, wrapper.height, 0, deferredAttr[STROKE_WIDTH]);
 
@@ -4874,6 +4942,12 @@
                         wrapper.setSpanRotation(rotation, alignCorrection, baseline);
                     }
 
+                    // Reset multiline/ellipsis in order to read width (#4928, #5417)
+                    css(elem, {
+                        width: '',
+                        whiteSpace: whiteSpace || 'nowrap'
+                    });
+
                     // Update textWidth
                     if (elem.offsetWidth > textWidth && /[ \-]/.test(elem.textContent || elem.innerText)) { // #983, #1254
                         css(elem, {
@@ -4881,17 +4955,10 @@
                             display: 'block',
                             whiteSpace: whiteSpace || 'normal' // #3331
                         });
-                        wrapper.hasTextWidth = true;
-                    } else if (wrapper.hasTextWidth) { // #4928
-                        css(elem, {
-                            width: '',
-                            display: '',
-                            whiteSpace: whiteSpace || 'nowrap'
-                        });
-                        wrapper.hasTextWidth = false;
                     }
 
-                    wrapper.getSpanCorrection(wrapper.hasTextWidth ? textWidth : elem.offsetWidth, baseline, alignCorrection, rotation, align);
+
+                    wrapper.getSpanCorrection(elem.offsetWidth, baseline, alignCorrection, rotation, align);
                 }
 
                 // apply position with correction
@@ -5040,7 +5107,8 @@
                                     position: ABSOLUTE,
                                     left: (parentGroup.translateX || 0) + PX,
                                     top: (parentGroup.translateY || 0) + PX,
-                                    opacity: parentGroup.opacity // #5075
+                                    opacity: parentGroup.opacity, // #5075
+                                    pointerEvents: parentGroup.styles && parentGroup.styles.pointerEvents // #5595
                                 }, htmlGroup || container); // the top group is appended to container
 
                                 // Shortcut
@@ -6608,10 +6676,11 @@
                 if (show && isNumber(xy.y)) {
                     xy.opacity = opacity;
                     label[tick.isNew ? 'attr' : 'animate'](xy);
-                    tick.isNew = false;
                 } else {
+                    stop(label); // #5332
                     label.attr('y', -9999); // #1338
                 }
+                tick.isNew = false;
             }
         },
 
@@ -7106,7 +7175,7 @@
 
             // Flag, isXAxis
             axis.isXAxis = isXAxis;
-            axis.coll = isXAxis ? 'xAxis' : 'yAxis';
+            axis.coll = axis.coll || (isXAxis ? 'xAxis' : 'yAxis');
 
             axis.opposite = userOptions.opposite; // needed in setOptions
             axis.side = userOptions.side || (axis.horiz ?
@@ -7134,7 +7203,8 @@
             axis.zoomEnabled = options.zoomEnabled !== false;
 
             // Initial categories
-            axis.categories = options.categories || type === 'category';
+            axis.hasNames = type === 'category' || options.categories === true;
+            axis.categories = options.categories || axis.hasNames;
             axis.names = axis.names || []; // Preserve on update (#3830)
 
             // Elements
@@ -7218,7 +7288,7 @@
 
             // Register
             if (inArray(axis, chart.axes) === -1) { // don't add it again on Axis.update()
-                if (isXAxis && !this.isColorAxis) { // #2713
+                if (isXAxis) { // #2713
                     chart.axes.splice(chart.xAxis.length, 0, axis);
                 } else {
                     chart.axes.push(axis);
@@ -7256,7 +7326,7 @@
         setOptions: function (userOptions) {
             this.options = merge(
                 this.defaultOptions,
-                this.isXAxis ? {} : this.defaultYAxisOptions,
+                this.coll === 'yAxis' && this.defaultYAxisOptions,
                 [this.defaultTopAxisOptions, this.defaultRightAxisOptions,
                     this.defaultBottomAxisOptions, this.defaultLeftAxisOptions][this.side],
                 merge(
@@ -7298,7 +7368,7 @@
                 // logic to the numberFormatter and enable it by a parameter.
                 while (i-- && ret === UNDEFINED) {
                     multi = Math.pow(1000, i + 1);
-                    if (numericSymbolDetector >= multi && (value * 10) % multi === 0 && numericSymbols[i] !== null) {
+                    if (numericSymbolDetector >= multi && (value * 10) % multi === 0 && numericSymbols[i] !== null && value !== 0) { // #5480
                         ret = Highcharts.numberFormat(value / multi, -1) + numericSymbols[i];
                     }
                 }
@@ -7672,13 +7742,13 @@
                 // if min and max options have been set, don't go beyond it
                 minArgs = [min - zoomOffset, pick(options.min, min - zoomOffset)];
                 if (spaceAvailable) { // if space is available, stay within the data range
-                    minArgs[2] = axis.dataMin;
+                    minArgs[2] = axis.isLog ? axis.log2lin(axis.dataMin) : axis.dataMin;
                 }
                 min = arrayMax(minArgs);
 
                 maxArgs = [min + minRange, pick(options.max, min + minRange)];
                 if (spaceAvailable) { // if space is availabe, stay within the data range
-                    maxArgs[2] = axis.dataMax;
+                    maxArgs[2] = axis.isLog ? axis.log2lin(axis.dataMax) : axis.dataMax;
                 }
 
                 max = arrayMin(maxArgs);
@@ -7701,15 +7771,77 @@
          */
         getClosest: function () {
             var ret;
-            each(this.series, function (series) {
-                var seriesClosest = series.closestPointRange;
-                if (!series.noSharedTooltip && defined(seriesClosest)) {
-                    ret = defined(ret) ?
-                        mathMin(ret, seriesClosest) :
-                        seriesClosest;
-                }
-            });
+
+            if (this.categories) {
+                ret = 1;
+            } else {
+                each(this.series, function (series) {
+                    var seriesClosest = series.closestPointRange;
+                    if (!series.noSharedTooltip && defined(seriesClosest)) {
+                        ret = defined(ret) ?
+                            mathMin(ret, seriesClosest) :
+                            seriesClosest;
+                    }
+                });
+            }
             return ret;
+        },
+
+        /**
+         * When a point name is given and no x, search for the name in the existing categories,
+         * or if categories aren't provided, search names or create a new category (#2522).
+         */
+        nameToX: function (point) {
+            var explicitCategories = isArray(this.categories),
+                names = explicitCategories ? this.categories : this.names,
+                nameX,
+                x;
+
+            point.series.requireSorting = false;
+            nameX = pick(point.options.x, inArray(point.name, names)); // #2522
+            if (nameX === -1) { // The name is not found in currenct categories
+                if (!explicitCategories) {
+                    x = names.length;
+                }
+            } else {
+                x = nameX;
+            }
+
+            // Write the last point's name to the names array
+            this.names[x] = point.name;
+
+            return x;
+        },
+
+        /**
+         * When changes have been done to series data, update the axis.names.
+         */
+        updateNames: function () {
+            var axis = this;
+
+            if (this.names.length > 0) {
+                this.names.length = 0;
+                this.minRange = undefined;
+                each(this.series || [], function (series) {
+            
+                    // When adding a series, points are not yet generated
+                    if (!series.processedXData) {
+                        series.processData();
+                        series.generatePoints();
+                    }
+
+                    each(series.points, function (point, i) {
+                        var x;
+                        if (point.options && point.options.x === undefined) {
+                            x = axis.nameToX(point);
+                            if (x !== point.x) {
+                                point.x = x;
+                                series.xData[i] = x;
+                            }
+                        }
+                    });
+                });
+            }
         },
 
         /**
@@ -8409,10 +8541,8 @@
                 realMin = isLog ? lin2log(axis.min) : axis.min,
                 realMax = isLog ? lin2log(axis.max) : axis.max;
 
-            // With a threshold of null, make the columns/areas rise from the top or bottom
-            // depending on the value, assuming an actual threshold of 0 (#4233).
             if (threshold === null) {
-                threshold = realMax < 0 ? realMax : realMin;
+                threshold = realMin;
             } else if (realMin > threshold) {
                 threshold = realMin;
             } else if (realMax < threshold) {
@@ -8884,7 +9014,7 @@
                 offset = this.offset,
                 xOption = axisTitleOptions.x || 0,
                 yOption = axisTitleOptions.y || 0,
-                fontSize = pInt(axisTitleOptions.style.fontSize || 12),
+                fontSize = this.chart.renderer.fontMetrics(axisTitleOptions.style.fontSize).f,
 
                 // the position in the length direction of the axis
                 alongAxis = {
@@ -9185,6 +9315,12 @@
                 categorized,
                 strokeWidth;
 
+            // Use last available event when updating non-snapped crosshairs without
+            // mouse interaction (#5287)
+            if (!e) {
+                e = this.cross && this.cross.e;
+            }
+
             if (
                 // Disabled in options
                 !this.crosshair ||
@@ -9192,7 +9328,6 @@
                 ((defined(point) || !pick(options.snap, true)) === false)
             ) {
                 this.hideCrosshair();
-
             } else {
 
                 // Get the path
@@ -9236,7 +9371,7 @@
                     }
                     this.cross = this.chart.renderer.path(path).attr(attribs).add();
                 }
-
+                this.cross.e = e;
             }
 
         },
@@ -9608,12 +9743,12 @@
                     fill: options.backgroundColor,
                     'stroke-width': borderWidth,
                     r: options.borderRadius,
-                    zIndex: 8
+                    zIndex: 8,
+                    display: 'none' // #2301, #2657, #3532, #5570
                 })
                 .css(style)
                 .css({ padding: 0 }) // Remove it from VML, the padding is applied as an attribute instead (#1117)
-                .add()
-                .attr({ y: -9999 }); // #2301, #2657
+                .add();
 
             // When using canVG the shadow shows up as a gray circle
             // even if the tooltip is hidden.
@@ -9937,7 +10072,10 @@
                 // show it
                 if (tooltip.isHidden) {
                     stop(label);
-                    label.attr('opacity', 1).show();
+                    label.attr({
+                        opacity: 1,
+                        display: 'block'
+                    }).show();
                 }
 
                 // update text
@@ -10052,18 +10190,18 @@
          * Format the footer/header of the tooltip
          * #3397: abstraction to enable formatting of footer and header
          */
-        tooltipFooterHeaderFormatter: function (point, isFooter) {
+        tooltipFooterHeaderFormatter: function (labelConfig, isFooter) {
             var footOrHead = isFooter ? 'footer' : 'header',
-                series = point.series,
+                series = labelConfig.series,
                 tooltipOptions = series.tooltipOptions,
                 xDateFormat = tooltipOptions.xDateFormat,
                 xAxis = series.xAxis,
-                isDateTime = xAxis && xAxis.options.type === 'datetime' && isNumber(point.key),
+                isDateTime = xAxis && xAxis.options.type === 'datetime' && isNumber(labelConfig.key),
                 formatString = tooltipOptions[footOrHead + 'Format'];
 
             // Guess the best date format based on the closest point distance (#568, #3418)
             if (isDateTime && !xDateFormat) {
-                xDateFormat = this.getXDateFormat(point, tooltipOptions, xAxis);
+                xDateFormat = this.getXDateFormat(labelConfig, tooltipOptions, xAxis);
             }
 
             // Insert the footer date format if any
@@ -10072,7 +10210,7 @@
             }
 
             return format(formatString, {
-                point: point,
+                point: labelConfig,
                 series: series
             });
         },
@@ -10245,6 +10383,11 @@
 
             // Handle shared tooltip or cases where a series is not yet hovered
             } else {
+                // When we have non-shared tooltip and sticky tracking is disabled,
+                // search for the closest point only on hovered series: #5533, #5476
+                if (!shared && hoverSeries && !hoverSeries.options.stickyTracking) {
+                    series = [hoverSeries];
+                }
                 // Find nearest points on all series
                 each(series, function (s) {
                     // Skip hidden series
@@ -10373,13 +10516,10 @@
                     if (hoverPoint) { // #2500
                         hoverPoint.setState(hoverPoint.state, true);
                         each(chart.axes, function (axis) {
-                            if (pick(axis.crosshair && axis.crosshair.snap, true)) {
+                            if (axis.crosshair) {
                                 axis.drawCrosshair(null, hoverPoint);
-                            }  else {
-                                axis.hideCrosshair();
                             }
                         });
-
                     }
                 }
 
@@ -10414,8 +10554,7 @@
                     axis.hideCrosshair();
                 });
 
-                pointer.hoverX = chart.hoverPoints = chart.hoverPoint = null;
-
+                pointer.hoverX = pointer.prevKDPoint = chart.hoverPoints = chart.hoverPoint = null;
             }
         },
 
@@ -12226,6 +12365,7 @@
 
                     // set axes scales
                     each(axes, function (axis) {
+                        axis.updateNames();
                         axis.setScale();
                     });
                 }
@@ -12518,7 +12658,9 @@
             // Destroy the clone and bring the container back to the real renderTo div
             if (revert) {
                 if (clone) {
-                    this.renderTo.appendChild(container);
+                    while (clone.childNodes.length) { // #5231
+                        this.renderTo.appendChild(clone.firstChild);
+                    }
                     discardElement(clone);
                     delete this.renderToClone;
                 }
@@ -12713,20 +12855,20 @@
             var chart = this,
                 optionsChart = chart.options.chart,
                 renderTo = chart.renderTo,
+                hasUserWidth = defined(optionsChart.width),
                 width = optionsChart.width || getStyle(renderTo, 'width'),
                 height = optionsChart.height || getStyle(renderTo, 'height'),
                 target = e ? e.target : win;
 
             // Width and height checks for display:none. Target is doc in IE8 and Opera,
             // win in Firefox, Chrome and IE9.
-            if (!chart.hasUserSize && !chart.isPrinting && width && height && (target === win || target === doc)) { // #1093
+            if (!hasUserWidth && !chart.isPrinting && width && height && (target === win || target === doc)) { // #1093
                 if (width !== chart.containerWidth || height !== chart.containerHeight) {
                     clearTimeout(chart.reflowTimeout);
                     // When called from window.resize, e is set, else it's called directly (#2224)
                     chart.reflowTimeout = syncTimeout(function () {
                         if (chart.container) { // It may have been destroyed in the meantime (#1257)
-                            chart.setSize(width, height, false);
-                            chart.hasUserSize = null;
+                            chart.setSize(undefined, undefined, false);
                         }
                     }, e ? 100 : 0);
                 }
@@ -12759,8 +12901,6 @@
          */
         setSize: function (width, height, animation) {
             var chart = this,
-                chartWidth,
-                chartHeight,
                 renderer = chart.renderer,
                 globalAnimation;
 
@@ -12772,23 +12912,23 @@
 
             chart.oldChartHeight = chart.chartHeight;
             chart.oldChartWidth = chart.chartWidth;
-            if (defined(width)) {
-                chart.chartWidth = chartWidth = mathMax(0, mathRound(width));
-                chart.hasUserSize = !!chartWidth;
+            if (width !== undefined) {
+                chart.options.chart.width = width;
             }
-            if (defined(height)) {
-                chart.chartHeight = chartHeight = mathMax(0, mathRound(height));
+            if (height !== undefined) {
+                chart.options.chart.height = height;
             }
+            chart.getChartSize();
 
             // Resize the container with the global animation applied if enabled (#2503)
             globalAnimation = renderer.globalAnimation;
             (globalAnimation ? animate : css)(chart.container, {
-                width: chartWidth + PX,
-                height: chartHeight + PX
+                width: chart.chartWidth + PX,
+                height: chart.chartHeight + PX
             }, globalAnimation);
 
             chart.setChartSize(true);
-            renderer.setSize(chartWidth, chartHeight, animation);
+            renderer.setSize(chart.chartWidth, chart.chartHeight, animation);
 
             // handle axes
             chart.maxTicks = null;
@@ -13074,7 +13214,7 @@
                     } else {
                         linkedTo = chart.get(linkedTo);
                     }
-                    if (linkedTo) {
+                    if (linkedTo && linkedTo.linkedParent !== series) { // #3341 avoid mutual linking
                         linkedTo.linkedSeries.push(series);
                         series.linkedParent = linkedTo;
                         series.visible = pick(series.options.visible, linkedTo.options.visible, series.visible); // #3879
@@ -13509,14 +13649,21 @@
             if (pointValKey) {
                 point.y = point[pointValKey];
             }
-            point.isNull = point.x === null || point.y === null;
+            point.isNull = point.x === null || !isNumber(point.y, true); // #3571, check for NaN
 
             // If no x is set by now, get auto incremented value. All points must have an
             // x value, however the y value can be null to create a gap in the series
-            if (point.x === undefined && series) {
-                point.x = x === undefined ? series.autoIncrement() : x;
+            if ('name' in point && x === undefined && series.xAxis && series.xAxis.hasNames) {
+                point.x = series.xAxis.nameToX(point);
             }
-
+            if (point.x === undefined && series) {
+                if (x === undefined) {
+                    point.x = series.autoIncrement(point);
+                } else {
+                    point.x = x;
+                }
+            }
+        
             return point;
         },
 
@@ -14031,7 +14178,6 @@
                 chart = series.chart,
                 firstPoint = null,
                 xAxis = series.xAxis,
-                hasCategories = xAxis && !!xAxis.categories,
                 i,
                 turboThreshold = options.turboThreshold,
                 pt,
@@ -14081,15 +14227,10 @@
 
 
                     if (isNumber(firstPoint)) { // assume all points are numbers
-                        var x = pick(options.pointStart, 0),
-                            pointInterval = pick(options.pointInterval, 1);
-
                         for (i = 0; i < dataLength; i++) {
-                            xData[i] = x;
+                            xData[i] = this.autoIncrement();
                             yData[i] = data[i];
-                            x += pointInterval;
                         }
-                        series.xIncrement = x;
                     } else if (isArray(firstPoint)) { // assume all points are arrays
                         if (valueCount) { // [x, low, high] or [x, o, h, l, c]
                             for (i = 0; i < dataLength; i++) {
@@ -14113,9 +14254,6 @@
                             pt = { series: series };
                             series.pointClass.prototype.applyOptions.apply(pt, [data[i]]);
                             series.updateParallelArrays(pt, i);
-                            if (hasCategories && defined(pt.name)) { // #4401
-                                xAxis.names[pt.x] = pt.name; // #2046
-                            }
                         }
                     }
                 }
@@ -14371,7 +14509,7 @@
 
                 // For points within the visible range, including the first point outside the
                 // visible range, consider y extremes
-                validValue = y !== null && y !== UNDEFINED && (!yAxis.isLog || (y.length || y > 0));
+                validValue = (isNumber(y, true) || isArray(y)) && (!yAxis.isLog || (y.length || y > 0));
                 withinRange = this.getExtremesFromAll || this.options.getExtremesFromAll || this.cropped ||
                     ((xData[i + 1] || x) >= xMin &&    (xData[i - 1] || x) <= xMax);
 
@@ -14434,8 +14572,7 @@
 
                 // Discard disallowed y values for log axes (#3434)
                 if (yAxis.isLog && yValue !== null && yValue <= 0) {
-                    point.y = yValue = null;
-                    error(10);
+                    point.isNull = true;
                 }
 
                 // Get the plotX translation
@@ -14486,7 +14623,7 @@
 
 
                 // Set client related positions for mouse tracking
-                point.clientX = dynamicallyPlaced ? xAxis.translate(xValue, 0, 0, 0, 1) : plotX; // #1514
+                point.clientX = dynamicallyPlaced ? correctFloat(xAxis.translate(xValue, 0, 0, 0, 1, pointPlacement)) : plotX; // #1514, #5383, #5518
 
                 point.negative = point.y < (threshold || 0);
 
@@ -14549,10 +14686,15 @@
                     );
                 }
                 chart[sharedClipKey] = clipRect = renderer.clipRect(clipBox);
+                // Create hashmap for series indexes
+                clipRect.count = { length: 0 };
 
             }
             if (animation) {
-                clipRect.count += 1;
+                if (!clipRect.count[this.index]) {
+                    clipRect.count[this.index] = true;
+                    clipRect.count.length += 1;
+                }
             }
 
             if (options.clip !== false) {
@@ -14563,8 +14705,12 @@
 
             // Remove the shared clipping rectangle when all series are shown
             if (!animation) {
-                clipRect.count -= 1;
-                if (clipRect.count <= 0 && sharedClipKey && chart[sharedClipKey]) {
+                if (clipRect.count[this.index]) {
+                    delete clipRect.count[this.index];
+                    clipRect.count.length -= 1;
+                }
+
+                if (clipRect.count.length === 0 && sharedClipKey && chart[sharedClipKey]) {
                     if (!seriesClipBox) {
                         chart[sharedClipKey] = chart[sharedClipKey].destroy();
                     }
@@ -14775,7 +14921,7 @@
             if (seriesOptions.marker) { // line, spline, area, areaspline, scatter
 
                 // if no hover radius is given, default to normal radius + 2
-                stateOptionsHover.radius = stateOptionsHover.radius || normalOptions.radius + stateOptionsHover.radiusPlus;
+                stateOptionsHover.radius = +stateOptionsHover.radius || +normalOptions.radius + +stateOptionsHover.radiusPlus;
                 stateOptionsHover.lineWidth = stateOptionsHover.lineWidth || normalOptions.lineWidth + stateOptionsHover.lineWidthPlus;
 
             } else { // column, bar, pie
@@ -14983,6 +15129,7 @@
                 step = options.step,
                 reversed,
                 graphPath = [],
+                xMap = [],
                 gap;
 
             points = points || series.points;
@@ -15008,7 +15155,7 @@
 
                 var plotX = point.plotX,
                     plotY = point.plotY,
-                    lastPoint = points[i - 1],                
+                    lastPoint = points[i - 1],
                     pathToPoint; // the path to this point from the previous
 
                 if ((point.leftCliff || (lastPoint && lastPoint.rightCliff)) && !connectCliffs) {
@@ -15069,12 +15216,18 @@
                         ];
                     }
 
+                    // Prepare for animation. When step is enabled, there are two path nodes for each x value.
+                    xMap.push(point.x);
+                    if (step) {
+                        xMap.push(point.x);
+                    }
 
                     graphPath.push.apply(graphPath, pathToPoint);
                     gap = false;
                 }
             });
 
+            graphPath.xMap = xMap;
             series.graphPath = graphPath;
 
             return graphPath;
@@ -15104,6 +15257,7 @@
                     attribs;
 
                 if (graph) {
+                    graph.endX = graphPath.xMap;
                     graph.animate({ d: graphPath });
 
                 } else if (lineWidth && graphPath.length) { // #1487
@@ -15119,10 +15273,17 @@
                         attribs['stroke-linecap'] = attribs['stroke-linejoin'] = 'round';
                     }
 
-                    series[graphKey] = series.chart.renderer.path(graphPath)
+                    graph = series[graphKey] = series.chart.renderer.path(graphPath)
                         .attr(attribs)
                         .add(series.group)
                         .shadow((i < 2) && options.shadow); // add shadow to normal series (0) or to first zone (1) #3932
+                }
+
+                // Helpers for animation
+                if (graph) {
+                    graph.startX = graphPath.xMap;
+                    //graph.shiftUnit = options.step ? 2 : 1;
+                    graph.isArea = graphPath.isArea; // For arearange animation
                 }
             });
         },
@@ -15144,15 +15305,17 @@
                 chartSizeMax = mathMax(chart.chartWidth, chart.chartHeight),
                 axis = this[(this.zoneAxis || 'y') + 'Axis'],
                 extremes,
-                reversed = axis.reversed,
+                reversed,
                 inverted = chart.inverted,
-                horiz = axis.horiz,
+                horiz,
                 pxRange,
                 pxPosMin,
                 pxPosMax,
                 ignoreZones = false;
 
-            if (zones.length && (graph || area) && axis.min !== UNDEFINED) {
+            if (zones.length && (graph || area) && axis && axis.min !== UNDEFINED) {
+                reversed = axis.reversed;
+                horiz = axis.horiz;
                 // The use of the Color Threshold assumes there are no gaps
                 // so it is safe to hide the original graph and area
                 if (graph) {
@@ -15202,7 +15365,7 @@
                     }
 
                     /// VML SUPPPORT
-                    if (chart.inverted && renderer.isVML) {
+                    if (inverted && renderer.isVML) {
                         if (axis.isXAxis) {
                             clipAttr = {
                                 x: 0,
@@ -16150,8 +16313,7 @@
                 graphic = point.graphic,
                 i,
                 chart = series.chart,
-                seriesOptions = series.options,
-                names = series.xAxis && series.xAxis.names;
+                seriesOptions = series.options;
 
             redraw = pick(redraw, true);
 
@@ -16163,7 +16325,7 @@
                 if (point.y === null && graphic) { // #4146
                     point.graphic = graphic.destroy();
                 }
-                if (isObject(options) && !isArray(options)) {
+                if (isObject(options, true)) {
                     // Defer the actual redraw until getAttribs has been called (#3260)
                     point.redraw = function () {
                         if (graphic && graphic.element) {
@@ -16181,13 +16343,10 @@
                 // record changes in the parallel arrays
                 i = point.index;
                 series.updateParallelArrays(point, i);
-                if (names && point.name) {
-                    names[point.x] = point.name;
-                }
-
+            
                 // Record the options to options.data. If there is an object from before,
                 // use point options, otherwise use raw options. (#4701)
-                seriesOptions.data[i] =  (isObject(seriesOptions.data[i]) && !isArray(seriesOptions.data[i])) ? point.options : options;
+                seriesOptions.data[i] = isObject(seriesOptions.data[i], true) ? point.options : options;
 
                 // redraw
                 series.isDirty = series.isDirtyData = true;
@@ -16237,12 +16396,8 @@
             var series = this,
                 seriesOptions = series.options,
                 data = series.data,
-                graph = series.graph,
-                area = series.area,
                 chart = series.chart,
                 names = series.xAxis && series.xAxis.names,
-                currentShift = (graph && graph.shift) || 0,
-                shiftShapes = ['graph', 'area'],
                 dataOptions = seriesOptions.data,
                 point,
                 isInTheMiddle,
@@ -16251,22 +16406,6 @@
                 x;
 
             setAnimation(animation, chart);
-
-            // Make graph animate sideways
-            if (shift) {
-                i = series.zones.length;
-                while (i--) {
-                    shiftShapes.push('zoneGraph' + i, 'zoneArea' + i);
-                }
-                each(shiftShapes, function (shape) {
-                    if (series[shape]) {
-                        series[shape].shift = currentShift + (seriesOptions.step ? 2 : 1);
-                    }
-                });
-            }
-            if (area) {
-                area.isArea = true; // needed in animation, both with and without shift
-            }
 
             // Optional redraw, defaults to true
             redraw = pick(redraw, true);
@@ -16374,12 +16513,11 @@
          * @param {Boolean|Object} animation Whether to apply animation, and optionally animation
          *    configuration
          */
-        remove: function (redraw, animation) {
+        remove: function (redraw, animation, withEvent) {
             var series = this,
                 chart = series.chart;
 
-            // Fire the event with a default handler of removing the point
-            fireEvent(series, 'remove', null, function () {
+            function remove() {
 
                 // Destroy elements
                 series.destroy();
@@ -16391,7 +16529,14 @@
                 if (pick(redraw, true)) {
                     chart.redraw(animation);
                 }
-            });
+            }
+
+            // Fire the event with a default handler of removing the point
+            if (withEvent !== false) {
+                fireEvent(series, 'remove', null, remove);
+            } else {
+                remove();
+            }
         },
 
         /**
@@ -16428,7 +16573,7 @@
 
             // Destroy the series and delete all properties. Reinsert all methods
             // and properties from the new type prototype (#2270, #3719)
-            this.remove(false);
+            this.remove(false, null, false);
             for (n in proto) {
                 this[n] = UNDEFINED;
             }
@@ -16713,14 +16858,14 @@
                         });
                         bottomPoints.push({
                             plotX: plotX,
-                            plotY: bottom === null ? translatedThreshold : yAxis.getThreshold(bottom)
+                            plotY: bottom === null ? translatedThreshold : yAxis.getThreshold(bottom),
+                            doCurve: false // #1041, gaps in areaspline areas
                         });
                     }
                 };
 
             // Find what points to use
             points = points || this.points;
-
         
             // Fill in missing points
             if (stacking) {
@@ -16764,6 +16909,7 @@
             areaPath = topPath.concat(bottomPath);
             graphPath = getGraphPath.call(this, graphPoints, false, connectNulls); // TODO: don't set leftCliff and rightCliff when connectNulls?
 
+            areaPath.xMap = topPath.xMap;
             this.areaPath = areaPath;
             return graphPath;
         },
@@ -16798,6 +16944,7 @@
 
                 // Create or update the area
                 if (area) { // update
+                    area.endX = areaPath.xMap;
                     area.animate({ d: areaPath });
 
                 } else { // create
@@ -16808,10 +16955,13 @@
                     if (!prop[2]) {
                         attr['fill-opacity'] = pick(options.fillOpacity, 0.75);
                     }
-                    series[areaKey] = series.chart.renderer.path(areaPath)
+                    area = series[areaKey] = series.chart.renderer.path(areaPath)
                         .attr(attr)
                         .add(series.group);
+                    area.isArea = true;
                 }
+                area.startX = areaPath.xMap;
+                area.shiftUnit = options.step ? 2 : 1;
             });
         },
 
@@ -16846,8 +16996,12 @@
                 rightContY,
                 ret;
 
+            function doCurve(otherPoint) {
+                return otherPoint && !otherPoint.isNull && otherPoint.doCurve !== false;
+            }
+
             // Find control points
-            if (lastPoint && !lastPoint.isNull && nextPoint && !nextPoint.isNull) {
+            if (doCurve(lastPoint) && doCurve(nextPoint)) {
                 var lastX = lastPoint.plotX,
                     lastY = lastPoint.plotY,
                     nextX = nextPoint.plotX,
@@ -16898,29 +17052,35 @@
                 this.chart.renderer.circle(leftContX + this.chart.plotLeft, leftContY + this.chart.plotTop, 2)
                     .attr({
                         stroke: 'red',
-                        'stroke-width': 1,
-                        fill: 'none'
+                        'stroke-width': 2,
+                        fill: 'none',
+                        zIndex: 9
                     })
                     .add();
                 this.chart.renderer.path(['M', leftContX + this.chart.plotLeft, leftContY + this.chart.plotTop,
                     'L', plotX + this.chart.plotLeft, plotY + this.chart.plotTop])
                     .attr({
                         stroke: 'red',
-                        'stroke-width': 1
+                        'stroke-width': 2,
+                        zIndex: 9
                     })
                     .add();
+            }
+            if (rightContX) {
                 this.chart.renderer.circle(rightContX + this.chart.plotLeft, rightContY + this.chart.plotTop, 2)
                     .attr({
                         stroke: 'green',
-                        'stroke-width': 1,
-                        fill: 'none'
+                        'stroke-width': 2,
+                        fill: 'none',
+                        zIndex: 9
                     })
                     .add();
                 this.chart.renderer.path(['M', rightContX + this.chart.plotLeft, rightContY + this.chart.plotTop,
                     'L', plotX + this.chart.plotLeft, plotY + this.chart.plotTop])
                     .attr({
                         stroke: 'green',
-                        'stroke-width': 1
+                        'stroke-width': 2,
+                        zIndex: 9
                     })
                     .add();
             }
@@ -17614,6 +17774,10 @@
             // Get the total sum
             for (i = 0; i < len; i++) {
                 point = points[i];
+                // Disallow negative values (#1530, #3623, #5322)
+                if (point.y < 0) {
+                    point.y = null;
+                }
                 total += (ignoreHiddenPoint && !point.visible) ? 0 : point.y;
             }
             this.total = total;
@@ -17890,8 +18054,8 @@
                 dataLabelsGroup.attr({ opacity: +hasRendered }); // #3300
                 if (!hasRendered) {
                     addEvent(series, 'afterAnimate', function () {
-                        if (series.visible) { // #3023, #3024
-                            dataLabelsGroup.show();
+                        if (series.visible) { // #2597, #3023, #3024
+                            dataLabelsGroup.show(true);
                         }
                         dataLabelsGroup[seriesOptions.animation ? 'animate' : 'attr']({ opacity: 1 }, { duration: 200 });
                     });

@@ -5,7 +5,6 @@
 	$path = $_GET['path'];
 	$mode = @$_GET['mode'];
 	$i = $_GET['i'];
-	$continue = @$_GET['continue'];
 	$rightcommit = @$_GET['rightcommit'];
 	$commit = @$_GET['commit']; // Used from Phantom test
 
@@ -47,8 +46,8 @@
 		<script src="cache.php?file=http://code.jquery.com/jquery-1.7.js"></script>
 		<script src="cache.php?file=http://ejohn.org/files/jsdiff.js"></script>
 
-		<script src="cache.php?file=http://www.highcharts.com/lib/canvg-1.1/rgbcolor.js"></script>
-		<script src="cache.php?file=http://www.highcharts.com/lib/canvg-1.1/canvg.js"></script>
+		<script src="cache.php?file=https://rawgit.com/gabelerner/canvg/v1.4/rgbcolor.js"></script>
+		<script src="cache.php?file=https://rawgit.com/gabelerner/canvg/v1.4/canvg.js"></script>
 		<link rel="stylesheet" type="text/css" href="style.css"/>
 
 
@@ -66,7 +65,6 @@
 				error,
 				mode = '<?php echo $mode ?>',
 				i = '<?php echo $i ?>',
-				_continue = '<?php echo $continue ?>',
 				isManual = <?php echo ($isManual ? 'true' : 'false'); ?>,
 				rightcommit = <?php echo ($rightcommit ? "'$rightcommit'" : 'false'); ?>,
 				commit = <?php echo ($commit ? "'$commit'" : 'false'); ?>,
@@ -193,7 +191,7 @@
 							$span = $('<a>')
 								.attr({
 									'class': 'dissimilarity-index',
-									href: location.href.replace(/continue=true/, '').replace(/rightcommit/, 'bogus'),
+									href: location.href.replace(/rightcommit/, 'bogus'),
 									target: 'main',
 									<?php if ($isUnitTest) : ?>
 									title: 'How many unit tests passed out of the total' ,
@@ -215,7 +213,7 @@
 							$span = $('<a>')
 								.attr({
 									'class': 'dissimilarity-index',
-									href: location.href.replace(/continue=true/, '').replace(/rightcommit/, 'bogus'),
+									href: location.href.replace(/rightcommit/, 'bogus'),
 									target: 'main',
 									title: 'Compare'
 								})
@@ -224,7 +222,7 @@
 
 						}
 
-						if (_continue) {
+						if (window.parent.frames[0] && window.parent.frames[0].continueBatch) {
 							$(contentDoc.body).animate({
 								scrollTop: $(li).offset().top - 300
 							}, 0);
@@ -269,7 +267,7 @@
 
 			function proceed() {
 				var i = '<?php echo $i ?>';
-				if (window.parent.frames[0] && i !== '' && _continue === 'true' ) {
+				if (window.parent.frames[0] && i !== '' && window.parent.frames[0].continueBatch) {
 					var contentDoc = window.parent.frames[0].document,
 						href,
 						next;
@@ -294,7 +292,7 @@
 						}
 					}
 
-					href = href.replace("view.php", "compare-view.php") + '&continue=true';
+					href = href.replace("view.php", "compare-view.php");
 
 					window.location.href = href;
 
@@ -504,6 +502,12 @@
 									}
 									callback(data);
 								}
+								image.onerror = function (e) {
+									var side = source === source1 ? 'left' : 'right';
+									report += '<div>Failed painting SVG to canvas on ' + side + ' side.</div>';
+									$('#report').html(report).css('background', '#f15c80');
+									onDifferent('Error');
+								}
 								image.src = useBlob ?
 									svgurl :
 									'data:image/svg+xml,' + source;
@@ -522,7 +526,7 @@
 								}
 								diff /= dividend;
 
-								if (diff < 0.005) {
+								if (diff > 0 && diff < 0.005) {
 									diff = 0;
 								}
 								return diff;
@@ -567,7 +571,7 @@
 								});
 
 							// start converting
-							if (navigator.userAgent.indexOf('Trident') !== -1) {
+							if (/Edge\/|Trident\/|MSIE /.test(navigator.userAgent)) {
 								try {
 									canvg(canvas1, source1, {
 										scaleWidth: canvasWidth,
@@ -657,18 +661,19 @@
 
 					}
 				} else {
-					if (leftVersion === rightVersion) {
-						console.log("Warning: Left and right versions are equal.");
-					}
-
 					report += '<div>Left version: '+ leftVersion +'; right version: '+
 						(rightcommit ? '<a href="http://github.com/highcharts/highcharts/commit/' + rightcommit + '" target="_blank">' +
 							rightcommit + '</a>' : rightVersion) +
 						'</div>';
 
-					report += identical ?
-						'<div>The innerHTML is identical</div>' :
-						'<div>The innerHTML is different, testing generated SVG...</div>';
+					if (identical) {
+						report += '<div>The innerHTML is identical</div>';
+						if (leftVersion === rightVersion) {
+							report += "<div style='color: red; font-weight: bold'>Warning: Left and right versions are identical.</div>";
+						}
+					} else {
+						report += '<div>The innerHTML is different, testing generated SVG...</div>';
+					}
 
 					$('#report').html(report)
 						.css('background', identical ? "#a4edba" : '#f15c80');

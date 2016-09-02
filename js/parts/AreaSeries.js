@@ -187,14 +187,14 @@ var AreaSeries = extendClass(Series, {
 					});
 					bottomPoints.push({
 						plotX: plotX,
-						plotY: bottom === null ? translatedThreshold : yAxis.getThreshold(bottom)
+						plotY: bottom === null ? translatedThreshold : yAxis.getThreshold(bottom),
+						doCurve: false // #1041, gaps in areaspline areas
 					});
 				}
 			};
 
 		// Find what points to use
 		points = points || this.points;
-
 		
 		// Fill in missing points
 		if (stacking) {
@@ -238,6 +238,7 @@ var AreaSeries = extendClass(Series, {
 		areaPath = topPath.concat(bottomPath);
 		graphPath = getGraphPath.call(this, graphPoints, false, connectNulls); // TODO: don't set leftCliff and rightCliff when connectNulls?
 
+		areaPath.xMap = topPath.xMap;
 		this.areaPath = areaPath;
 		return graphPath;
 	},
@@ -272,6 +273,7 @@ var AreaSeries = extendClass(Series, {
 
 			// Create or update the area
 			if (area) { // update
+				area.endX = areaPath.xMap;
 				area.animate({ d: areaPath });
 
 			} else { // create
@@ -282,10 +284,13 @@ var AreaSeries = extendClass(Series, {
 				if (!prop[2]) {
 					attr['fill-opacity'] = pick(options.fillOpacity, 0.75);
 				}
-				series[areaKey] = series.chart.renderer.path(areaPath)
+				area = series[areaKey] = series.chart.renderer.path(areaPath)
 					.attr(attr)
 					.add(series.group);
+				area.isArea = true;
 			}
+			area.startX = areaPath.xMap;
+			area.shiftUnit = options.step ? 2 : 1;
 		});
 	},
 

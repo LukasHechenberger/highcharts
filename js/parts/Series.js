@@ -327,7 +327,6 @@ Series.prototype = {
 			chart = series.chart,
 			firstPoint = null,
 			xAxis = series.xAxis,
-			hasCategories = xAxis && !!xAxis.categories,
 			i,
 			turboThreshold = options.turboThreshold,
 			pt,
@@ -377,15 +376,10 @@ Series.prototype = {
 
 
 				if (isNumber(firstPoint)) { // assume all points are numbers
-					var x = pick(options.pointStart, 0),
-						pointInterval = pick(options.pointInterval, 1);
-
 					for (i = 0; i < dataLength; i++) {
-						xData[i] = x;
+						xData[i] = this.autoIncrement();
 						yData[i] = data[i];
-						x += pointInterval;
 					}
-					series.xIncrement = x;
 				} else if (isArray(firstPoint)) { // assume all points are arrays
 					if (valueCount) { // [x, low, high] or [x, o, h, l, c]
 						for (i = 0; i < dataLength; i++) {
@@ -409,9 +403,6 @@ Series.prototype = {
 						pt = { series: series };
 						series.pointClass.prototype.applyOptions.apply(pt, [data[i]]);
 						series.updateParallelArrays(pt, i);
-						if (hasCategories && defined(pt.name)) { // #4401
-							xAxis.names[pt.x] = pt.name; // #2046
-						}
 					}
 				}
 			}
@@ -667,7 +658,7 @@ Series.prototype = {
 
 			// For points within the visible range, including the first point outside the
 			// visible range, consider y extremes
-			validValue = y !== null && y !== UNDEFINED && (!yAxis.isLog || (y.length || y > 0));
+			validValue = (isNumber(y, true) || isArray(y)) && (!yAxis.isLog || (y.length || y > 0));
 			withinRange = this.getExtremesFromAll || this.options.getExtremesFromAll || this.cropped ||
 				((xData[i + 1] || x) >= xMin &&	(xData[i - 1] || x) <= xMax);
 
@@ -730,8 +721,7 @@ Series.prototype = {
 
 			// Discard disallowed y values for log axes (#3434)
 			if (yAxis.isLog && yValue !== null && yValue <= 0) {
-				point.y = yValue = null;
-				error(10);
+				point.isNull = true;
 			}
 
 			// Get the plotX translation
@@ -782,7 +772,7 @@ Series.prototype = {
 
 
 			// Set client related positions for mouse tracking
-			point.clientX = dynamicallyPlaced ? xAxis.translate(xValue, 0, 0, 0, 1) : plotX; // #1514
+			point.clientX = dynamicallyPlaced ? correctFloat(xAxis.translate(xValue, 0, 0, 0, 1, pointPlacement)) : plotX; // #1514, #5383, #5518
 
 			point.negative = point.y < (threshold || 0);
 
@@ -845,10 +835,15 @@ Series.prototype = {
 				);
 			}
 			chart[sharedClipKey] = clipRect = renderer.clipRect(clipBox);
+			// Create hashmap for series indexes
+			clipRect.count = { length: 0 };
 
 		}
 		if (animation) {
-			clipRect.count += 1;
+			if (!clipRect.count[this.index]) {
+				clipRect.count[this.index] = true;
+				clipRect.count.length += 1;
+			}
 		}
 
 		if (options.clip !== false) {
@@ -859,8 +854,12 @@ Series.prototype = {
 
 		// Remove the shared clipping rectangle when all series are shown
 		if (!animation) {
-			clipRect.count -= 1;
-			if (clipRect.count <= 0 && sharedClipKey && chart[sharedClipKey]) {
+			if (clipRect.count[this.index]) {
+				delete clipRect.count[this.index];
+				clipRect.count.length -= 1;
+			}
+
+			if (clipRect.count.length === 0 && sharedClipKey && chart[sharedClipKey]) {
 				if (!seriesClipBox) {
 					chart[sharedClipKey] = chart[sharedClipKey].destroy();
 				}
@@ -1071,7 +1070,7 @@ Series.prototype = {
 		if (seriesOptions.marker) { // line, spline, area, areaspline, scatter
 
 			// if no hover radius is given, default to normal radius + 2
-			stateOptionsHover.radius = stateOptionsHover.radius || normalOptions.radius + stateOptionsHover.radiusPlus;
+			stateOptionsHover.radius = +stateOptionsHover.radius || +normalOptions.radius + +stateOptionsHover.radiusPlus;
 			stateOptionsHover.lineWidth = stateOptionsHover.lineWidth || normalOptions.lineWidth + stateOptionsHover.lineWidthPlus;
 
 		} else { // column, bar, pie
@@ -1279,6 +1278,7 @@ Series.prototype = {
 			step = options.step,
 			reversed,
 			graphPath = [],
+			xMap = [],
 			gap;
 
 		points = points || series.points;
@@ -1304,7 +1304,7 @@ Series.prototype = {
 
 			var plotX = point.plotX,
 				plotY = point.plotY,
-				lastPoint = points[i - 1],					
+				lastPoint = points[i - 1],
 				pathToPoint; // the path to this point from the previous
 
 			if ((point.leftCliff || (lastPoint && lastPoint.rightCliff)) && !connectCliffs) {
@@ -1365,12 +1365,18 @@ Series.prototype = {
 					];
 				}
 
+				// Prepare for animation. When step is enabled, there are two path nodes for each x value.
+				xMap.push(point.x);
+				if (step) {
+					xMap.push(point.x);
+				}
 
 				graphPath.push.apply(graphPath, pathToPoint);
 				gap = false;
 			}
 		});
 
+		graphPath.xMap = xMap;
 		series.graphPath = graphPath;
 
 		return graphPath;
@@ -1400,6 +1406,7 @@ Series.prototype = {
 				attribs;
 
 			if (graph) {
+				graph.endX = graphPath.xMap;
 				graph.animate({ d: graphPath });
 
 			} else if (lineWidth && graphPath.length) { // #1487
@@ -1415,10 +1422,17 @@ Series.prototype = {
 					attribs['stroke-linecap'] = attribs['stroke-linejoin'] = 'round';
 				}
 
-				series[graphKey] = series.chart.renderer.path(graphPath)
+				graph = series[graphKey] = series.chart.renderer.path(graphPath)
 					.attr(attribs)
 					.add(series.group)
 					.shadow((i < 2) && options.shadow); // add shadow to normal series (0) or to first zone (1) #3932
+			}
+
+			// Helpers for animation
+			if (graph) {
+				graph.startX = graphPath.xMap;
+				//graph.shiftUnit = options.step ? 2 : 1;
+				graph.isArea = graphPath.isArea; // For arearange animation
 			}
 		});
 	},
@@ -1440,15 +1454,17 @@ Series.prototype = {
 			chartSizeMax = mathMax(chart.chartWidth, chart.chartHeight),
 			axis = this[(this.zoneAxis || 'y') + 'Axis'],
 			extremes,
-			reversed = axis.reversed,
+			reversed,
 			inverted = chart.inverted,
-			horiz = axis.horiz,
+			horiz,
 			pxRange,
 			pxPosMin,
 			pxPosMax,
 			ignoreZones = false;
 
-		if (zones.length && (graph || area) && axis.min !== UNDEFINED) {
+		if (zones.length && (graph || area) && axis && axis.min !== UNDEFINED) {
+			reversed = axis.reversed;
+			horiz = axis.horiz;
 			// The use of the Color Threshold assumes there are no gaps
 			// so it is safe to hide the original graph and area
 			if (graph) {
@@ -1498,7 +1514,7 @@ Series.prototype = {
 				}
 
 				/// VML SUPPPORT
-				if (chart.inverted && renderer.isVML) {
+				if (inverted && renderer.isVML) {
 					if (axis.isXAxis) {
 						clipAttr = {
 							x: 0,

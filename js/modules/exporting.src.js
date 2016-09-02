@@ -102,7 +102,7 @@ defaultOptions.exporting = {
 	//enabled: true,
 	//filename: 'chart',
 	type: 'image/png',
-	url: 'http://export.highcharts.com/',
+	url: 'https://export.highcharts.com/',
 	//width: undefined,
 	printMaxWidth: 780,
 	scale: 2,
@@ -209,6 +209,7 @@ extend(Chart.prototype, {
 			.replace(/isShadow="[^"]+"/g, '')
 			.replace(/symbolName="[^"]+"/g, '')
 			.replace(/jQuery[0-9]+="[^"]+"/g, '')
+            .replace(/url\(("|&quot;)(\S+)("|&quot;)\)/g, 'url($2)')
 			.replace(/url\([^#]+#/g, 'url(#')
 			.replace(/<svg /, '<svg xmlns:xlink="http://www.w3.org/1999/xlink" ')
 			.replace(/ (NS[0-9]+\:)?href=/g, ' xlink:href=') // #3567
@@ -426,20 +427,12 @@ extend(Chart.prototype, {
 		var chart = this,
 			container = chart.container,
 			origDisplay = [],
-<<<<<<< HEAD
-			origParent = container.parentNode;
-      console.log(doc, doc.body);
-		var body = doc.body,
-			childNodes = body.childNodes;
-=======
 			origParent = container.parentNode,
 			body = doc.body,
 			childNodes = body.childNodes,
 			printMaxWidth = chart.options.exporting.printMaxWidth,
-			hasUserSize,
 			resetParams,
 			handleMaxWidth;
->>>>>>> highcharts/master
 
 		if (chart.isPrinting) { // block the button while in printing mode
 			return;
@@ -453,9 +446,8 @@ extend(Chart.prototype, {
 		// Handle printMaxWidth
 		handleMaxWidth = printMaxWidth && chart.chartWidth > printMaxWidth;
 		if (handleMaxWidth) {
-			hasUserSize = chart.hasUserSize;
-			resetParams = [chart.chartWidth, chart.chartHeight, false];
-			chart.setSize(printMaxWidth, chart.chartHeight, false);
+			resetParams = [chart.options.chart.width, undefined, false];
+			chart.setSize(printMaxWidth, undefined, false);
 		}
 
 		// hide all body content
@@ -491,7 +483,6 @@ extend(Chart.prototype, {
 			// Reset printMaxWidth
 			if (handleMaxWidth) {
 				chart.setSize.apply(chart, resetParams);
-				chart.hasUserSize = hasUserSize;
 			}
 
 			fireEvent(chart, 'afterPrint');

@@ -175,7 +175,7 @@ Navigator.prototype = {
 		}
 
 		// Place it
-		handles[index][scroller.rendered ? 'animate' : 'attr']({
+		handles[index][scroller.rendered && !scroller.hasDragged ? 'animate' : 'attr']({
 			translateX: scroller.scrollerLeft + scroller.scrollbarHeight + parseInt(x, 10),
 			translateY: scroller.top + scroller.height / 2 - 8
 		});
@@ -245,7 +245,6 @@ Navigator.prototype = {
 		scroller.range = scroller.zoomedMax - scroller.zoomedMin;
 		zoomedMax = mathRound(scroller.zoomedMax);
 		zoomedMin = mathRound(scroller.zoomedMin);
-		range = zoomedMax - zoomedMin;
 
 		if (!rendered) {
 
@@ -283,7 +282,7 @@ Navigator.prototype = {
 		}
 
 		// place elements
-		verb = rendered ? 'animate' : 'attr';
+		verb = rendered && !scroller.hasDragged ? 'animate' : 'attr';
 		if (navigatorEnabled) {
 			scroller.leftShade[verb](navigatorOptions.maskInside ? {
 				x: navigatorLeft + zoomedMin,
@@ -328,6 +327,9 @@ Navigator.prototype = {
 		}
 
 		if (scroller.scrollbar) {
+
+			scroller.scrollbar.hasDragged = scroller.hasDragged;
+				
 			// Keep scale 0-1
 			scroller.scrollbar.position(
 				scroller.scrollerLeft,
@@ -382,6 +384,7 @@ Navigator.prototype = {
 				chart.scroller.modifyNavigatorAxisExtremes();
 			});
 		}
+
 		addEvent(chart, 'redraw', function () {
 			// Move the scrollbar after redraw, like after data updata even if axes don't redraw
 			var scroller = this.scroller,
@@ -402,8 +405,13 @@ Navigator.prototype = {
 			removeEvent.apply(null, args);
 		});
 		this._events = UNDEFINED;
-		if (this.navigatorEnabled && this.baseSeries) {
+		this.removeBaseSeriesEvents();
+	},
+
+	removeBaseSeriesEvents: function () {
+		if (this.navigatorEnabled && this.baseSeries && this.baseSeries.xAxis && this.navigatorOptions.adaptToUpdatedData !== false) {
 			removeEvent(this.baseSeries, 'updatedData', this.updatedDataHandler);
+			removeEvent(this.baseSeries.xAxis, 'foundExtremes', this.modifyBaseAxisExtremes);
 		}
 	},
 
@@ -485,7 +493,7 @@ Navigator.prototype = {
 							ext.min,
 							ext.max,
 							true,
-							false,
+							null, // auto animation
 							{ trigger: 'navigator' }
 						);
 					}
@@ -504,8 +512,7 @@ Navigator.prototype = {
 				scrollerLeft = scroller.scrollerLeft,
 				scrollerWidth = scroller.scrollerWidth,
 				range = scroller.range,
-				chartX,
-				hasDragged;
+				chartX;
 
 			// In iOS, a mousemove event with e.pageX === 0 is fired when holding the finger
 			// down in the center of the scrollbar. This should be ignored.
@@ -523,18 +530,18 @@ Navigator.prototype = {
 
 				// drag left handle
 				if (scroller.grabbedLeft) {
-					hasDragged = true;
+					scroller.hasDragged = true;
 					scroller.render(0, 0, chartX - navigatorLeft, scroller.otherHandlePos);
 
 				// drag right handle
 				} else if (scroller.grabbedRight) {
-					hasDragged = true;
+					scroller.hasDragged = true;
 					scroller.render(0, 0, scroller.otherHandlePos, chartX - navigatorLeft);
 
 				// drag scrollbar or open area in navigator
 				} else if (scroller.grabbedCenter) {
 
-					hasDragged = true;
+					scroller.hasDragged = true;
 					if (chartX < dragOffset) { // outside left
 						chartX = dragOffset;
 					} else if (chartX > navigatorWidth + dragOffset - range) { // outside right
@@ -543,12 +550,12 @@ Navigator.prototype = {
 
 					scroller.render(0, 0, chartX - dragOffset, chartX - dragOffset + range);
 				}
-				if (hasDragged && scroller.scrollbar && scroller.scrollbar.options.liveRedraw) {
+				if (scroller.hasDragged && scroller.scrollbar && scroller.scrollbar.options.liveRedraw) {
+					e.DOMType = e.type; // DOMType is for IE8 because it can't read type async
 					setTimeout(function () {
 						scroller.mouseUpHandler(e);
 					}, 0);
 				}
-				scroller.hasDragged = hasDragged;
 			}
 		};
 
@@ -558,9 +565,10 @@ Navigator.prototype = {
 		scroller.mouseUpHandler = function (e) {
 			var ext,
 				fixedMin,
-				fixedMax;
+				fixedMax,
+				DOMEvent = e.DOMEvent || e;
 
-			if (scroller.hasDragged) {
+			if (scroller.hasDragged || e.trigger === 'scrollbar') {
 				// When dragging one handle, make sure the other one doesn't change
 				if (scroller.zoomedMin === scroller.otherHandlePos) {
 					fixedMin = scroller.fixedExtreme;
@@ -579,17 +587,17 @@ Navigator.prototype = {
 						ext.min,
 						ext.max,
 						true,
-						false,
+						scroller.hasDragged ? false : null, // Run animation when clicking buttons, scrollbar track etc, but not when dragging handles or scrollbar
 						{
 							trigger: 'navigator',
 							triggerOp: 'navigator-drag',
-							DOMEvent: e // #1838
+							DOMEvent: DOMEvent // #1838
 						}
 					);
 				}
 			}
 
-			if (e.type !== 'mousemove') {
+			if (e.DOMType !== 'mousemove') {
 				scroller.grabbedLeft = scroller.grabbedRight = scroller.grabbedCenter = scroller.fixedWidth =
 					scroller.fixedExtreme = scroller.otherHandlePos = scroller.hasDragged = dragOffset = null;
 			}
@@ -687,27 +695,19 @@ Navigator.prototype = {
 					to = range * this.to,
 					from = range * this.from;
 
+				scroller.hasDragged = scroller.scrollbar.hasDragged;
 				scroller.render(0, 0, from, to);
-				scroller.hasDragged = true;
-				scroller.mouseUpHandler(e);
-			});
-		}
 
-		// Respond to updated data in the base series.
-		// Abort if lazy-loading data from the server.
-		if (baseSeries && baseSeries.xAxis && this.navigatorOptions.adaptToUpdatedData !== false) {
-			addEvent(baseSeries, 'updatedData', this.updatedDataHandler);
-
-			addEvent(baseSeries.xAxis, 'foundExtremes', function () {
-				if (baseSeries.xAxis) {
-					this.chart.scroller.modifyBaseAxisExtremes();
+				if (chart.options.scrollbar.liveRedraw || e.DOMType !== 'mousemove') {
+					setTimeout(function () {
+						scroller.mouseUpHandler(e);
+					});
 				}
 			});
-		
-			// Survive Series.update()
-			baseSeries.userOptions.events = extend(baseSeries.userOptions.event, { updatedData: this.updatedDataHandler });
-
 		}
+
+		// Add data events
+		scroller.addBaseSeriesEvents();
 
 
 		/**
@@ -788,6 +788,7 @@ Navigator.prototype = {
 
 		// If we're resetting, remove the existing series
 		if (this.series) {
+			this.removeBaseSeriesEvents();
 			this.series.remove();
 		}
 
@@ -834,8 +835,22 @@ Navigator.prototype = {
 		// Add the series
 		this.series = this.chart.initSeries(mergedNavSeriesOptions);
 
-	},
+		this.addBaseSeriesEvents();
 
+	},
+	addBaseSeriesEvents: function () {
+		var baseSeries = this.baseSeries;
+
+		// Respond to updated data in the base series.
+		// Abort if lazy-loading data from the server.
+		if (baseSeries && baseSeries.xAxis && this.navigatorOptions.adaptToUpdatedData !== false) {
+			addEvent(baseSeries, 'updatedData', this.updatedDataHandler);
+			addEvent(baseSeries.xAxis, 'foundExtremes', this.modifyBaseAxisExtremes);
+		
+			// Survive Series.update()
+			baseSeries.userOptions.events = extend(baseSeries.userOptions.event, { updatedData: this.updatedDataHandler });
+		}
+	},
 	/**
 	 * Set the scroller x axis extremes to reflect the total. The navigator extremes
 	 * should always be the extremes of the union of all series in the chart as
@@ -847,59 +862,69 @@ Navigator.prototype = {
 
 		if (xAxis.getExtremes) {
 			unionExtremes = this.getUnionExtremes(true);
-
 			if (unionExtremes && (unionExtremes.dataMin !== xAxis.min || unionExtremes.dataMax !== xAxis.max)) {
 				xAxis.min = unionExtremes.dataMin;
 				xAxis.max = unionExtremes.dataMax;
 			}
-		}				
+		}
 	},
 
 	/**
 	 * Hook to modify the base axis extremes with information from the Navigator
 	 */
 	modifyBaseAxisExtremes: function () {
-		var baseSeries = this.baseSeries,
-			baseXAxis = baseSeries.xAxis,
+		if (!this.chart.scroller.baseSeries || !this.chart.scroller.baseSeries.xAxis) {
+			return;
+		}
+		
+		var baseXAxis = this,
+			scroller = baseXAxis.chart.scroller,
 			baseExtremes = baseXAxis.getExtremes(),
 			baseMin = baseExtremes.min,
 			baseMax = baseExtremes.max,
 			baseDataMin = baseExtremes.dataMin,
 			baseDataMax = baseExtremes.dataMax,
 			range = baseMax - baseMin,
-			stickToMin = this.stickToMin,
-			stickToMax = this.stickToMax,
+			stickToMin = scroller.stickToMin,
+			stickToMax = scroller.stickToMax,
 			newMax,
 			newMin,
-			navigatorSeries = this.series,
-			hasSetExtremes = !!baseXAxis.setExtremes;
+			navigatorSeries = scroller.series,
+			hasSetExtremes = !!baseXAxis.setExtremes,
 
-		// If the zoomed range is already at the min, move it to the right as new data
-		// comes in
-		if (stickToMin) {
-			newMin = baseDataMin;
-			newMax = newMin + range;
-		}
+			// When the extremes have been set by range selector button, don't stick to min or max.
+			// The range selector buttons will handle the extremes. (#5489)
+			unmutable = baseXAxis.eventArgs && baseXAxis.eventArgs.trigger === 'rangeSelectorButton';
 
-		// If the zoomed range is already at the max, move it to the right as new data
-		// comes in
-		if (stickToMax) {
-			newMax = baseDataMax;
-			if (!stickToMin) { // if stickToMin is true, the new min value is set above
-				newMin = mathMax(newMax - range, navigatorSeries ? navigatorSeries.xData[0] : -Number.MAX_VALUE);
+		if (!unmutable) {
+		
+			// If the zoomed range is already at the min, move it to the right as new data
+			// comes in
+			if (stickToMin) {
+				newMin = baseDataMin;
+				newMax = newMin + range;
 			}
-		}
 
-		// Update the extremes
-		if (hasSetExtremes && (stickToMin || stickToMax)) {
-			if (isNumber(newMin)) {
-				baseXAxis.min = baseXAxis.userMin = newMin;
-				baseXAxis.max = baseXAxis.userMax = newMax;
+			// If the zoomed range is already at the max, move it to the right as new data
+			// comes in
+			if (stickToMax) {
+				newMax = baseDataMax;
+				if (!stickToMin) { // if stickToMin is true, the new min value is set above
+					newMin = mathMax(newMax - range, navigatorSeries && navigatorSeries.xData ? navigatorSeries.xData[0] : -Number.MAX_VALUE);
+				}
+			}
+
+			// Update the extremes
+			if (hasSetExtremes && (stickToMin || stickToMax)) {
+				if (isNumber(newMin)) {
+					baseXAxis.min = baseXAxis.userMin = newMin;
+					baseXAxis.max = baseXAxis.userMax = newMax;
+				}
 			}
 		}
 
 		// Reset
-		this.stickToMin = this.stickToMax = null;
+		scroller.stickToMin = scroller.stickToMax = null;
 	},
 
 	/**
@@ -914,22 +939,15 @@ Navigator.prototype = {
 
 		// Detect whether the zoomed area should stick to the minimum or maximum. If the current
 		// axis minimum falls outside the new updated dataset, we must adjust.
-		scroller.stickToMin = baseSeries.xAxis.min <= baseSeries.xData[0];
+		scroller.stickToMin = isNumber(baseSeries.xAxis.min) && (baseSeries.xAxis.min <= baseSeries.xData[0]);
 		// If the scrollbar is scrolled all the way to the right, keep right as new data 
 		// comes in.
-		scroller.stickToMax = scroller.zoomedMax >= scroller.navigatorWidth;
+		scroller.stickToMax = Math.round(scroller.zoomedMax) >= Math.round(scroller.navigatorWidth);
 
 		// Set the navigator series data to the new data of the base series
 		if (navigatorSeries && !scroller.hasNavigatorData) {
 			navigatorSeries.options.pointStart = baseSeries.xData[0];
-			navigatorSeries.setData(baseSeries.options.data, false);
-
-			// When adding points, shift it. A more fail-safe and lean procedure may be to extend the three
-			// cases of updating data (addPoint, update, removePoint) directly so that this operation 
-			// on the base series reflects directly on the navigator series.
-			if (navigatorSeries.graph && baseSeries.graph) {
-				navigatorSeries.graph.shift = baseSeries.graph.shift;
-			}
+			navigatorSeries.setData(baseSeries.options.data, false, null, false); // #5414
 		}
 	},
 
@@ -1018,7 +1036,7 @@ wrap(Chart.prototype, 'init', function (proceed, options, callback) {
 // Pick up badly formatted point options to addPoint
 wrap(Series.prototype, 'addPoint', function (proceed, options, redraw, shift, animation) {
 	var turboThreshold = this.options.turboThreshold;
-	if (turboThreshold && this.xData.length > turboThreshold && isObject(options) && !isArray(options) && this.chart.scroller) {
+	if (turboThreshold && this.xData.length > turboThreshold && isObject(options, true) && this.chart.scroller) {
 		error(20, true);
 	}
 	proceed.call(this, options, redraw, shift, animation);
