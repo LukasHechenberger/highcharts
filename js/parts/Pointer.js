@@ -675,27 +675,28 @@ Pointer.prototype = {
 		var pointer = this,
 			container = pointer.chart.container;
 
-		container.onmousedown = function (e) {
+		addEvent(container, 'mousedown', function (e) {
 			pointer.onContainerMouseDown(e);
-		};
-		container.onmousemove = function (e) {
+		});
+		addEvent(container, 'mousemove', function (e) {
 			pointer.onContainerMouseMove(e);
-		};
-		container.onclick = function (e) {
+		});
+		addEvent(container, 'click', function (e) {
 			pointer.onContainerClick(e);
-		};
+		});
 		addEvent(container, 'mouseleave', pointer.onContainerMouseLeave);
+
 		if (chartCount === 1) {
 			addEvent(doc, 'mouseup', pointer.onDocumentMouseUp);
 			addEvent(container, 'mouseup', pointer.onDocumentMouseUp);
 		}
 		if (hasTouch) {
-			container.ontouchstart = function (e) {
+			addEvent(container, 'touchstart', function (e) {
 				pointer.onContainerTouchStart(e);
-			};
-			container.ontouchmove = function (e) {
+			});
+			addEvent(container, 'touchmove', function (e) {
 				pointer.onContainerTouchMove(e);
-			};
+			});
 			if (chartCount === 1) {
 				addEvent(doc, 'touchend', pointer.onDocumentTouchEnd);
 				addEvent(container, 'touchend', pointer.onDocumentTouchEnd);

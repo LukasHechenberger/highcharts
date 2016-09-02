@@ -2,7 +2,7 @@
 // @compilation_level SIMPLE_OPTIMIZATIONS
 
 /**
- * @license Highstock JS v4.2.5-modified (2016-05-31)
+ * @license Highstock JS v4.2.5-modified (2016-09-02)
  *
  * (c) 2009-2016 Torstein Honsi
  *
@@ -1167,7 +1167,7 @@
      * Add an event listener
      */
     addEvent = function (el, type, fn) {
-    
+
         var events = el.hcEvents = el.hcEvents || {};
 
         function wrappedFn(e) {
@@ -10766,27 +10766,28 @@
             var pointer = this,
                 container = pointer.chart.container;
 
-            container.onmousedown = function (e) {
+            addEvent(container, 'mousedown', function (e) {
                 pointer.onContainerMouseDown(e);
-            };
-            container.onmousemove = function (e) {
+            });
+            addEvent(container, 'mousemove', function (e) {
                 pointer.onContainerMouseMove(e);
-            };
-            container.onclick = function (e) {
+            });
+            addEvent(container, 'click', function (e) {
                 pointer.onContainerClick(e);
-            };
+            });
             addEvent(container, 'mouseleave', pointer.onContainerMouseLeave);
+
             if (chartCount === 1) {
                 addEvent(doc, 'mouseup', pointer.onDocumentMouseUp);
                 addEvent(container, 'mouseup', pointer.onDocumentMouseUp);
             }
             if (hasTouch) {
-                container.ontouchstart = function (e) {
+                addEvent(container, 'touchstart', function (e) {
                     pointer.onContainerTouchStart(e);
-                };
-                container.ontouchmove = function (e) {
+                });
+                addEvent(container, 'touchmove', function (e) {
                     pointer.onContainerTouchMove(e);
-                };
+                });
                 if (chartCount === 1) {
                     addEvent(doc, 'touchend', pointer.onDocumentTouchEnd);
                     addEvent(container, 'touchend', pointer.onDocumentTouchEnd);
@@ -20278,7 +20279,7 @@
      * End ordinal axis logic                                                   *
      *****************************************************************************/
     /**
-     * Highstock JS v4.2.5-modified (2016-05-31)
+     * Highstock JS v4.2.5-modified (2016-09-02)
      * Highcharts Broken Axis module
      * 
      * License: www.highcharts.com/license
