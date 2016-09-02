@@ -225,16 +225,17 @@ gulp.task('ftp-watch', function () {
 });
 
 
-gulp.task('custom-build', function() {
-  closureCompiler.compile(
-    ['js/highcharts.src.js'],
-    null,
-    function (error, ccResult) {
-      if (ccResult) {
-        fs.writeFileSync('./lib/highcharts.js', ccResult);
-      }
-    }
-  );
+gulp.task('custom-build', ['scripts'], function (cb) {
+    closureCompiler.compile(
+        ['js/highcharts.src.js'],
+        null,
+        function (error, ccResult) {
+            if (ccResult) {
+                fs.writeFileSync('./lib/highcharts.js', ccResult);
+                return cb();
+            }
+        }
+    );
 });
 
 /**
