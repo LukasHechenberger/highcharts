@@ -14,7 +14,9 @@ var colors = require('colors'),
     // sass = require('gulp-sass'),
     ftp = require('vinyl-ftp'),
     spawn = require('child_process').spawn,
-    xml2js = require('xml2js');
+    xml2js = require('xml2js'),
+    rename = require('gulp-rename'),
+    uglify = require('gulp-uglify');
 
 var paths = {
     buildsDir: './js/builds',
@@ -224,9 +226,24 @@ gulp.task('ftp-watch', function () {
     gulp.watch('./js/*/*.js', ['scripts', 'ftp']);
 });
 
+gulp.task('modules', function() {
+    return gulp.src('js/modules/**/*.src.js')
+        .pipe(gulp.dest('lib/modules'))
+        .pipe(uglify())
+        .pipe(rename(function(p) {
+            p.basename = p.basename.replace('.src', '');
+        }))
+        .pipe(gulp.dest('lib/modules'));
+})
 
-gulp.task('custom-build', ['scripts'], function (cb) {
-    closureCompiler.compile(
+gulp.task('custom-build', ['scripts', 'modules'], function (cb) {
+    return gulp.src('js/highcharts.src.js')
+        .pipe(uglify())
+        .pipe(rename(function(p) {
+            p.basename = p.basename.replace('.src', '');
+        }))
+        .pipe(gulp.dest('lib'));
+    /* closureCompiler.compile(
         ['js/highcharts.src.js'],
         null,
         function (error, ccResult) {
@@ -235,7 +252,7 @@ gulp.task('custom-build', ['scripts'], function (cb) {
                 return cb();
             }
         }
-    );
+    ); */
 });
 
 /**
