@@ -2,7 +2,7 @@
 // @compilation_level SIMPLE_OPTIMIZATIONS
 
 /**
- * @license Highstock JS v4.2.5-modified (2016-09-02)
+ * @license Highstock JS v4.2.5-modified (2016-09-06)
  *
  * (c) 2009-2016 Torstein Honsi
  *
@@ -3401,7 +3401,7 @@
             container.appendChild(element);
 
             // For browsers other than IE, add the namespace attribute (#1978)
-            if (container.innerHTML.indexOf('xmlns') === -1) {
+            if (container.innerHTML && container.innerHTML.indexOf('xmlns') === -1) {
                 attr(element, 'xmlns', SVG_NS);
             }
 
@@ -20443,7 +20443,7 @@
      * End ordinal axis logic                                                   *
      *****************************************************************************/
     /**
-     * Highstock JS v4.2.5-modified (2016-09-02)
+     * Highstock JS v4.2.5-modified (2016-09-06)
      * Highcharts Broken Axis module
      * 
      * License: www.highcharts.com/license

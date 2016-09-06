@@ -1,5 +1,5 @@
 /**
- * @license Highmaps JS v4.2.5-modified (2016-09-02)
+ * @license Highmaps JS v4.2.5-modified (2016-09-06)
  *
  * (c) 2011-2016 Torstein Honsi
  *
@@ -3399,7 +3399,7 @@
             container.appendChild(element);
 
             // For browsers other than IE, add the namespace attribute (#1978)
-            if (container.innerHTML.indexOf('xmlns') === -1) {
+            if (container.innerHTML && container.innerHTML.indexOf('xmlns') === -1) {
                 attr(element, 'xmlns', SVG_NS);
             }
 
