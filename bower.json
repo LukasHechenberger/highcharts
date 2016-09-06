@@ -2,7 +2,11 @@
     "name": "highcharts",
     "version": "4.2.6",
     "description": "JavaScript charting framework",
-    "main": "lib/highcharts.js",
+    "main": [
+        "lib/highcharts.js",
+        "lib/modules/exporting.js",
+        "lib/modules/offline-exporting.js"
+    ],
     "authors": [
         "Highsoft AS <support@highcharts.com> (http://www.highcharts.com/about)"
     ],
