@@ -1,5 +1,5 @@
 /**
- * @license Highmaps JS v4.2.5-modified (2016-09-06)
+ * @license Highmaps JS v4.2.7-modified (2016-09-21)
  *
  * (c) 2011-2016 Torstein Honsi
  *
@@ -57,7 +57,7 @@
         charts = [],
         chartCount = 0,
         PRODUCT = 'Highmaps',
-        VERSION = '4.2.5-modified',
+        VERSION = '4.2.7-modified',
 
         // some constants for frequently used strings
         DIV = 'div',
@@ -479,7 +479,7 @@
                         value = original[key];
 
                         // Copy the contents of objects, but not arrays or DOM nodes
-                        if (value && typeof value === 'object' && Object.prototype.toString.call(value) !== '[object Array]' &&
+                        if (Highcharts.isObject(value, true) &&
                                 key !== 'renderTo' && typeof value.nodeType !== 'number') {
                             copy[key] = doCopy(copy[key] || {}, value);
 
@@ -529,7 +529,8 @@
      * @param {Object} obj
      */
     function isArray(obj) {
-        return Object.prototype.toString.call(obj) === '[object Array]';
+        var str = Object.prototype.toString.call(obj);
+        return str === '[object Array]' || str === '[object Array Iterator]';
     }
 
     /**
@@ -1599,7 +1600,7 @@
             useUTC: true,
             //timezoneOffset: 0,
             canvasToolsURL: 'http://code.highcharts.com/modules/canvas-tools.js',
-            VMLRadialGradientURL: 'http://code.highcharts.com/maps/4.2.5-modified/gfx/vml-radial-gradient.png'
+            VMLRadialGradientURL: 'http://code.highcharts.com/maps/4.2.7-modified/gfx/vml-radial-gradient.png'
         },
         chart: {
             //animation: true,
@@ -3236,10 +3237,6 @@
         alignSetter: function (value) {
             this.element.setAttribute('text-anchor', { left: 'start', center: 'middle', right: 'end' }[value]);
         },
-        opacitySetter: function (value, key, element) {
-            this[key] = value;
-            element.setAttribute(key, value);
-        },
         titleSetter: function (value) {
             var titleNode = this.element.getElementsByTagName('title')[0];
             if (!titleNode) {
@@ -3351,6 +3348,13 @@
                 this.doTransform = true;
             };
 
+    // These setters both set the key on the instance itself plus as an attribute
+    SVGElement.prototype.opacitySetter = SVGElement.prototype.displaySetter = function (value, key, element) {
+        this[key] = value;
+        element.setAttribute(key, value);
+    };
+    
+
     // WebKit and Batik have problems with a stroke-width of zero, so in this case we remove the
     // stroke attribute altogether. #1270, #1369, #3065, #3072.
     SVGElement.prototype['stroke-widthSetter'] = SVGElement.prototype.strokeSetter = function (value, key, element) {
@@ -3376,7 +3380,6 @@
     };
     SVGRenderer.prototype = {
         Element: SVGElement,
-        urlSymbolRX: /^url\((.*?)\)$/,
         /**
          * Initialize the SVGRenderer
          * @param {Object} container
@@ -3679,7 +3682,8 @@
                                 // Check width and apply soft breaks or ellipsis
                                 if (width) {
                                     var words = span.replace(/([^\^])-/g, '$1- ').split(' '), // #1273
-                                        hasWhiteSpace = spans.length > 1 || lineNo || (words.length > 1 && textStyles.whiteSpace !== 'nowrap'),
+                                        noWrap = textStyles.whiteSpace === 'nowrap',
+                                        hasWhiteSpace = spans.length > 1 || lineNo || (words.length > 1 && !noWrap),
                                         tooLong,
                                         actualWidth,
                                         rest = [],
@@ -3723,7 +3727,7 @@
                                             words = rest;
                                             rest = [];
 
-                                            if (words.length) {
+                                            if (words.length && !noWrap) {
                                                 softLineNo++;
 
                                                 tspan = doc.createElementNS(SVG_NS, 'tspan');
@@ -4154,7 +4158,7 @@
                     height,
                     options
                 ),
-
+                imageRegex = /^url\((.*?)\)$/,
                 imageSrc,
                 imageSize,
                 centerImage;
@@ -4176,7 +4180,7 @@
 
 
             // image symbols
-            } else if (this.urlSymbolRX.test(symbol)) {
+            } else if (imageRegex.test(symbol)) {
 
                 // On image load, set the size and position
                 centerImage = function (img, size) {
@@ -4195,7 +4199,7 @@
                     }
                 };
 
-                imageSrc = symbol.match(this.urlSymbolRX)[1];
+                imageSrc = symbol.match(imageRegex)[1];
                 imageSize = symbolSizes[imageSrc] || (options && options.width && options.height && [options.width, options.height]);
 
                 // Ireate the image synchronously, add attribs async
@@ -4561,7 +4565,7 @@
                 crispAdjust = 0,
                 deferredAttr = {},
                 baselineOffset,
-                hasBGImage = renderer.urlSymbolRX.test(shape),
+                hasBGImage = /^url\((.*?)\)$/.test(shape),
                 needsBox = hasBGImage,
                 updateBoxSize,
                 updateTextPadding,
@@ -5014,7 +5018,7 @@
                 addSetters = function (element, style) {
                     // These properties are set as attributes on the SVG group, and as
                     // identical CSS properties on the div. (#3542)
-                    each(['opacity', 'visibility'], function (prop) {
+                    each(['display', 'opacity', 'visibility'], function (prop) {
                         wrap(element, prop + 'Setter', function (proceed, value, key, elem) {
                             proceed.call(this, value, key, elem);
                             style[key] = value;
@@ -5105,6 +5109,7 @@
                                     position: ABSOLUTE,
                                     left: (parentGroup.translateX || 0) + PX,
                                     top: (parentGroup.translateY || 0) + PX,
+                                    display: parentGroup.display,
                                     opacity: parentGroup.opacity, // #5075
                                     pointerEvents: parentGroup.styles && parentGroup.styles.pointerEvents // #5595
                                 }, htmlGroup || container); // the top group is appended to container
@@ -5616,6 +5621,9 @@
                 }
                 key = 'top';
             }
+            element.style[key] = value;
+        },
+        displaySetter: function (value, key, element) {
             element.style[key] = value;
         },
         xSetter: function (value, key, element) {
@@ -7526,11 +7534,6 @@
             point.series.requireSorting = false;
 
             if (!defined(nameX)) {
-                // docs: When nameToX is true, points are placed on the X axis according to their
-                // names. If the same point name is repeated in the same or another series, the point
-                // is placed together with other points of the same name. When nameToX is false,
-                // the points are laid out in increasing X positions regardless of their names, and
-                // the X axis category will take the name of the last point in each position.
                 nameX = this.options.nameToX === false ?
                     point.series.autoIncrement() : 
                     inArray(point.name, names);
@@ -8432,7 +8435,7 @@
                 labelMetrics = this.labelMetrics(),
                 textOverflowOption = labelOptions.style.textOverflow,
                 css,
-                labelLength = 0,
+                maxLabelLength = 0,
                 label,
                 i,
                 pos;
@@ -8442,20 +8445,22 @@
                 attr.rotation = labelOptions.rotation || 0; // #4443
             }
 
+            // Get the longest label length
+            each(tickPositions, function (tick) {
+                tick = ticks[tick];
+                if (tick && tick.labelLength > maxLabelLength) {
+                    maxLabelLength = tick.labelLength;
+                }
+            });
+            this.maxLabelLength = maxLabelLength;
+        
+
             // Handle auto rotation on horizontal axis
             if (this.autoRotation) {
 
-                // Get the longest label length
-                each(tickPositions, function (tick) {
-                    tick = ticks[tick];
-                    if (tick && tick.labelLength > labelLength) {
-                        labelLength = tick.labelLength;
-                    }
-                });
-
                 // Apply rotation only if the label is too wide for the slot, and
                 // the label is wider than its height.
-                if (labelLength > innerWidth && labelLength > labelMetrics.h) {
+                if (maxLabelLength > innerWidth && maxLabelLength > labelMetrics.h) {
                     attr.rotation = this.labelRotation;
                 } else {
                     this.labelRotation = 0;
@@ -8496,7 +8501,7 @@
             // Add ellipsis if the label length is significantly longer than ideal
             if (attr.rotation) {
                 css = {
-                    width: (labelLength > chart.chartHeight * 0.5 ? chart.chartHeight * 0.33 : chart.chartHeight) + PX
+                    width: (maxLabelLength > chart.chartHeight * 0.5 ? chart.chartHeight * 0.33 : chart.chartHeight) + PX
                 };
                 if (!textOverflowOption) {
                     css.textOverflow = 'ellipsis';
@@ -10009,10 +10014,10 @@
 
             // Crosshair. For each hover point, loop over axes and draw cross if that point
             // belongs to the axis (#4927).
-            each(shared ? kdpoints : [pick(hoverPoint, kdpoints[0])], function (point) { // #5269
-                each(chart.axes, function (axis) {
+            each(shared ? kdpoints : [pick(hoverPoint, kdpoints[0])], function drawPointCrosshair(point) { // #5269
+                each(chart.axes, function drawAxisCrosshair(axis) {
                     // In case of snap = false, point is undefined, and we draw the crosshair anyway (#5066)
-                    if (!point || point.series[axis.coll] === axis) {
+                    if (!point || point.series && point.series[axis.coll] === axis) { // #5658
                         axis.drawCrosshair(e, point);
                     }
                 });
@@ -13138,11 +13143,19 @@
             extend(point, options);
             point.options = point.options ? extend(point.options, options) : options;
 
+            // Since options are copied into the Point instance, some accidental options must be shielded (#5681)
+            if (options.group) {
+                delete point.group;
+            }
+
             // For higher dimension series types. For instance, for ranges, point.y is mapped to point.low.
             if (pointValKey) {
                 point.y = point[pointValKey];
             }
-            point.isNull = point.x === null || !isNumber(point.y, true); // #3571, check for NaN
+            point.isNull = pick(
+                point.isValid && !point.isValid(),
+                point.x === null || !isNumber(point.y, true)
+            ); // #3571, check for NaN
 
             // If no x is set by now, get auto incremented value. All points must have an
             // x value, however the y value can be null to create a gap in the series
@@ -13342,7 +13355,8 @@
             fireEvent(this, eventType, eventArgs, defaultFunction);
         },
         visible: true
-    };/**
+    };
+    /**
      * @classDescription The base function which all other series types inherit from. The data in the series is stored
      * in various arrays.
      *
@@ -15482,8 +15496,6 @@
                 i,
                 x;
 
-            setAnimation(animation, chart);
-
             // Optional redraw, defaults to true
             redraw = pick(redraw, true);
 
@@ -15535,9 +15547,10 @@
             // redraw
             series.isDirty = true;
             series.isDirtyData = true;
+
             if (redraw) {
                 series.getAttribs(); // #1937
-                chart.redraw();
+                chart.redraw(animation); // Animation is set anyway on redraw, #5665
             }
         },
 
@@ -17235,7 +17248,7 @@
             minColor: '#EFEFFF',
             maxColor: '#003875',
             tickLength: 5,
-            showInLegend: true // docs: API record is being added.
+            showInLegend: true
         },
         init: function (chart, userOptions) {
             var horiz = chart.options.legend.layout !== 'vertical',
@@ -17849,7 +17862,7 @@
          */
         onMouseOver: function (e) {
             clearTimeout(this.colorInterval);
-            if (this.value !== null) {
+            if (this.value !== null || this.series.options.nullInteraction) {
                 Point.prototype.onMouseOver.call(this, e);
             } else { //#3401 Tooltip doesn't hide when hovering over null points
                 this.series.onMouseOut(e);
@@ -18755,7 +18768,11 @@
                     y: yAxis.dataMin,
                     width: xAxis.dataMax - xAxis.dataMin,
                     height: yAxis.dataMax - yAxis.dataMin
-                });
+                }),
+                zoomOut = newExt.x <= xAxis.dataMin &&
+                    newExt.width >= xAxis.dataMax - xAxis.dataMin &&
+                    newExt.y <= yAxis.dataMin &&
+                    newExt.height >= yAxis.dataMax - yAxis.dataMin;
 
             // When mousewheel zooming, fix the point under the mouse
             if (mouseX) {
@@ -18766,7 +18783,7 @@
             }
 
             // Zoom
-            if (howMuch !== undefined) {
+            if (howMuch !== undefined && !zoomOut) {
                 xAxis.setExtremes(newExt.x, newExt.x + newExt.width, false);
                 yAxis.setExtremes(newExt.y, newExt.y + newExt.height, false);
 
@@ -18948,11 +18965,8 @@
         forceDL: true,
         pointClass: extendClass(Point, {
             applyOptions: function (options, x) {
-                var point = Point.prototype.applyOptions.call(this, options, x);
-                if (options.lat !== undefined && options.lon !== undefined) {
-                    point = extend(point, this.series.chart.fromLatLonToPoint(point));
-                }
-                return point;
+                var mergedOptions = options.lat !== undefined && options.lon !== undefined ? merge(options, this.series.chart.fromLatLonToPoint(options)) : options;
+                return Point.prototype.applyOptions.call(this, mergedOptions, x);
             }
         })
     });
@@ -19314,8 +19328,7 @@
                 applyOptions: function (options, x) {
                     var point;
                     if (options && options.lat !== undefined && options.lon !== undefined) {
-                        point = Point.prototype.applyOptions.call(this, options, x);
-                        point = extend(point, this.series.chart.fromLatLonToPoint(point));
+                        point = Point.prototype.applyOptions.call(this, merge(options, this.series.chart.fromLatLonToPoint(options)), x);
                     } else {
                         point = MapAreaPoint.prototype.applyOptions.call(this, options, x);
                     }

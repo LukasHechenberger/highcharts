@@ -301,28 +301,11 @@
 				}
 		};
 
-		/**
-		 * Add a new method to the Chart object to perform a local download
-		 */
-		Highcharts.Chart.prototype.exportChartLocal = function (exportingOptions, chartOptions) {
-				var chart = this,
-						options = Highcharts.merge(chart.options.exporting, exportingOptions),
-						imageType = options && options.type || 'image/png',
-						fallbackToExportServer = function () {
-								if (options.fallbackToExportServer === false) {
-										if (options.error) {
-												options.error();
-										} else {
-												throw 'Fallback to export server disabled';
-										}
-								} else {
-										chart.exportChart(options);
-								}
-						},
-						svgSuccess = function (svg) {
-								var filename = (options.filename || 'chart') + '.' + (imageType === 'image/svg+xml' ? 'svg' : imageType.split('/')[1]);
-								Highcharts.downloadSVGLocal(svg, filename, imageType, options.scale, fallbackToExportServer);
-						};
+		// If we have embedded images and are exporting to JPEG/PNG, Microsoft browsers won't handle it, so fall back
+		if (isMSBrowser && imageType !== 'image/svg+xml' && chart.container.getElementsByTagName('image').length) {
+			fallbackToExportServer();
+			return;
+		}
 
 				// If we have embedded images and are exporting to JPEG/PNG, Microsoft browsers won't handle it, so fall back
 				// docs

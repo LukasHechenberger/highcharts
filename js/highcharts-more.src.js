@@ -2,7 +2,7 @@
 // @compilation_level SIMPLE_OPTIMIZATIONS
 
 /**
- * @license Highcharts JS v4.2.5-modified (2016-09-02)
+ * @license Highcharts JS v4.2.7-modified (2016-09-21)
  *
  * (c) 2009-2016 Torstein Honsi
  *
@@ -303,6 +303,11 @@ var arrayMin = Highcharts.arrayMin,
          * tickPositions are computed, so that ticks will extend passed the real max.
          */
         beforeSetTickPositions: function () {
+            // If autoConnect is true, polygonal grid lines are connected, and one closestPointRange
+            // is added to the X axis to prevent the last point from overlapping the first.
+            this.autoConnect = this.isCircular && pick(this.userMax, this.options.max) === undefined &&
+                this.endAngleRad - this.startAngleRad === 2 * Math.PI;
+        
             if (this.autoConnect) {
                 this.max += (this.categories && 1) || this.pointRange || this.closestPointRange || 0; // #1197, #2260
             }
@@ -514,8 +519,6 @@ var arrayMin = Highcharts.arrayMin,
             isX = userOptions.isX,
             isHidden = angular && isX,
             isCircular,
-            startAngleRad,
-            endAngleRad,
             options,
             chartOptions = chart.options,
             paneIndex = userOptions.pane || 0,
@@ -564,17 +567,13 @@ var arrayMin = Highcharts.arrayMin,
             // Start and end angle options are
             // given in degrees relative to top, while internal computations are
             // in radians relative to right (like SVG).
-            this.angleRad = (options.angle || 0) * Math.PI / 180; // Y axis in polar charts // docs. Sample created. API marked "next".
-            this.startAngleRad = startAngleRad = (paneOptions.startAngle - 90) * Math.PI / 180; // Gauges
-            this.endAngleRad = endAngleRad = (pick(paneOptions.endAngle, paneOptions.startAngle + 360)  - 90) * Math.PI / 180; // Gauges
+            this.angleRad = (options.angle || 0) * Math.PI / 180; // Y axis in polar charts
+            this.startAngleRad = (paneOptions.startAngle - 90) * Math.PI / 180; // Gauges
+            this.endAngleRad = (pick(paneOptions.endAngle, paneOptions.startAngle + 360)  - 90) * Math.PI / 180; // Gauges
             this.offset = options.offset || 0;
 
             this.isCircular = isCircular;
 
-            // Automatically connect grid lines?
-            if (isCircular && userOptions.max === UNDEFINED && endAngleRad - startAngleRad === 2 * Math.PI) {
-                this.autoConnect = true;
-            }
         }
 
     });
@@ -1621,7 +1620,14 @@ var arrayMin = Highcharts.arrayMin,
         },
         pointValKey: 'high', // defines the top of the tracker
         doQuartiles: false,
-        drawDataLabels: seriesTypes.arearange ? seriesTypes.arearange.prototype.drawDataLabels : noop,
+        drawDataLabels: seriesTypes.arearange ? function () {
+            var valKey = this.pointValKey;
+            seriesTypes.arearange.prototype.drawDataLabels.call(this);
+            // Arearange drawDataLabels does not reset point.y to high, but to low after drawing. #4133 
+            each(this.data, function (point) {
+                point.y = point[valKey];
+            });
+        } : noop,
 
         /**
          * Get the width and X offset, either on top of the linked series column
@@ -1664,6 +1670,15 @@ var arrayMin = Highcharts.arrayMin,
         upColorProp: 'fill',
 
         pointValKey: 'y',
+
+        /**
+         * Pass the null test in ColumnSeries.translate.
+         */
+        pointClass: extendClass(Point, {
+            isValid: function () {
+                return isNumber(this.y, true) || this.isSum || this.isIntermediateSum;
+            }
+        }),
 
         /**
          * Translate data points from raw values

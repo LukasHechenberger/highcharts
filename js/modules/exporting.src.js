@@ -165,19 +165,26 @@ defaultOptions.exporting = {
 };
 
 // Add the Highcharts.post utility
-Highcharts.post = function (url, data, formAttributes) {
+Highcharts.post = function (chart, url, data, formAttributes) {
 	var name,
-		  form;
+		form;
 
 	// create the form
-  console.log(document, document.childNodes[0], doc.body);
-	form = createElement('form', merge({
+	var doc = chart.container.ownerDocument;
+
+	form = doc.createElement('form');
+	form.setAttribute('method', 'post');
+	form.setAttribute('action', url);
+	form.setAttribute('enctype', 'multipart/form-data');
+
+	chart.container.appendChild(form);
+	/* form = createElement('form', merge({
 		method: 'post',
 		action: url,
 		enctype: 'multipart/form-data'
 	}, formAttributes), {
 		display: NONE
-	}, document.childNodes[0]);
+	}, chart.container.ownerDocument.body); */
 
 	// add the data
 	for (name in data) {
@@ -187,8 +194,6 @@ Highcharts.post = function (url, data, formAttributes) {
 			value: data[name]
 		}, null, form);
 	}
-
-  console.log(form);
 
 	// submit
 	form.submit();
@@ -409,7 +414,7 @@ extend(Chart.prototype, {
 		options = merge(this.options.exporting, options);
 
 		// do the post
-		Highcharts.post(options.url, {
+		Highcharts.post(this, options.url, {
 			filename: options.filename || 'chart',
 			type: options.type,
 			width: options.width || 0, // IE8 fails to post undefined correctly, so use 0
@@ -428,7 +433,7 @@ extend(Chart.prototype, {
 			container = chart.container,
 			origDisplay = [],
 			origParent = container.parentNode,
-			body = doc.body,
+			body = chart.container.ownerDocument.body,
 			childNodes = body.childNodes,
 			printMaxWidth = chart.options.exporting.printMaxWidth,
 			resetParams,

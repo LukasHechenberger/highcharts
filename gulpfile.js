@@ -179,12 +179,12 @@ gulp.task('lint', ['scripts'], function () {
 
 });
 gulp.task('lint-samples', function () {
-    return gulp.src(['./samples/*/*/*/demo.js'])
+    return gulp.src(['./samples/*/*/*/demo.js', './samples/*/*/*/test.js', './samples/*/*/*/unit-test.js'])
 
         // ESLint config is found in .eslintrc file(s)
         .pipe(eslint())
         .pipe(gulpif(argv.failonerror, eslint.failOnError())) // gulp lint --failonerror
-        .pipe(eslint.formatEach());
+        .pipe(eslint.format()); // .format() counts all errors, .formatEach() shows results as they are available
 
 });
 
@@ -277,7 +277,8 @@ gulp.task('nightly', function () {
 
 gulp.task('filesize', function () {
     var oldSize,
-        newSize;
+        newSize,
+        filename = argv.file ? argv.file : 'highcharts.src.js';
 
     /**
      * Pad a string to a given length by adding spaces to the beginning
@@ -299,7 +300,7 @@ gulp.task('filesize', function () {
             color = diff > 0 ? 'yellow' : 'green';
         console.log([
             '',
-            colors.cyan('highcharts.js ') + colors.gray('(gzipped)'),
+            colors.cyan(filename.replace('.src', '')) + colors.gray('(gzipped)'),
             'HEAD: ' + pad(oldSize.toLocaleString(), 7) + ' B',
             'New:  ' + pad(newSize.toLocaleString(), 7) + ' B',
             colors[color]('Diff: ' + pad(sign + diff, 7) + ' B'),
@@ -308,7 +309,7 @@ gulp.task('filesize', function () {
     }
 
     closureCompiler.compile(
-        ['js/highcharts.src.js'],
+        ['js/' + filename],
         null,
         function (error, ccResult) {
             if (ccResult) {
@@ -320,7 +321,7 @@ gulp.task('filesize', function () {
                     }
 
                     closureCompiler.compile(
-                        ['js/highcharts.src.js'],
+                        ['js/' + filename],
                         null,
                         function (ccError, ccResultOld) {
                             if (ccResultOld) {
