@@ -843,7 +843,7 @@ H.Pointer.prototype = {
 		};
 		addEvent(container, 'mouseleave', pointer.onContainerMouseLeave);
 		if (H.chartCount === 1) {
-			addEvent(doc, 'mouseup', pointer.onDocumentMouseUp);
+			addEvent(win.top.document, 'mouseup', pointer.onDocumentMouseUp);
 		}
 		if (H.hasTouch) {
 			container.ontouchstart = function (e) {
@@ -853,7 +853,7 @@ H.Pointer.prototype = {
 				pointer.onContainerTouchMove(e);
 			};
 			if (H.chartCount === 1) {
-				addEvent(doc, 'touchend', pointer.onDocumentTouchEnd);
+				addEvent(win.top.document, 'touchend', pointer.onDocumentTouchEnd);
 			}
 		}
 
