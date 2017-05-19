@@ -742,7 +742,7 @@ H.css = function (el, styles) {
  * @returns {HTMLDOMElement} The created DOM element.
  */
 H.createElement = function (tag, attribs, styles, parent, nopad) {
-	var el = doc.createElement(tag),
+	var el = doc.createElementNS('http://www.w3.org/1999/xhtml', tag),
 		css = H.css;
 	if (attribs) {
 		H.extend(el, attribs);
