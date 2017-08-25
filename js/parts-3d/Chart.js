@@ -129,29 +129,210 @@ H.wrap(H.Chart.prototype, 'isInsidePlot', function (proceed) {
 });
 
 var defaultOptions = H.getOptions();
-merge(true, defaultOptions, {
+
+/**
+ * Options to render charts in 3 dimensions. 
+ * This feature requires highcharts-3d.js, found in the download package, 
+ * or online at code.highcharts.com/highcharts-3d.js.
+ * @optionparent
+ */
+var extendedOptions = 	{
+
+	/**
+	 * Options regarding the chart area and plot area as well as general
+	 * chart options.
+	 *
+	 */
 	chart: {
+
+		/**
+		 * Options to render charts in 3 dimensions. This feature requires
+		 * `highcharts-3d.js`, found in the download package or online at
+		 * [code.highcharts.com/highcharts-3d.js](http://code.highcharts.com/highcharts-
+		 * 3d.js).
+		 * 
+		 * @since 4.0
+		 * @product highcharts
+		 */
 		options3d: {
+
+			/**
+			 * Wether to render the chart using the 3D functionality.
+			 * 
+			 * @type {Boolean}
+			 * @default false
+			 * @since 4.0
+			 * @product highcharts
+			 */
 			enabled: false,
+
+			/**
+			 * One of the two rotation angles for the chart.
+			 * 
+			 * @type {Number}
+			 * @default 0
+			 * @since 4.0
+			 * @product highcharts
+			 */
 			alpha: 0,
+
+			/**
+			 * One of the two rotation angles for the chart.
+			 * 
+			 * @type {Number}
+			 * @default 0
+			 * @since 4.0
+			 * @product highcharts
+			 */
 			beta: 0,
+
+			/**
+			 * The total depth of the chart.
+			 * 
+			 * @type {Number}
+			 * @default 100
+			 * @since 4.0
+			 * @product highcharts
+			 */
 			depth: 100,
+
+			/**
+			 * Whether the 3d box should automatically adjust to the chart plot
+			 * area.
+			 * 
+			 * @type {Boolean}
+			 * @default true
+			 * @since 4.2.4
+			 * @product highcharts
+			 */
 			fitToPlot: true,
+
+			/**
+			 * Defines the distance the viewer is standing in front of the chart,
+			 * this setting is important to calculate the perspective effect
+			 * in column and scatter charts. It is not used for 3D pie charts.
+			 * 
+			 * @type {Number}
+			 * @default 100
+			 * @since 4.0
+			 * @product highcharts
+			 */
 			viewDistance: 25,
+
+			/**
+			 * Set it to `"auto"` to automatically move the labels to the best
+			 * edge.
+			 * 
+			 * @validvalue [null, "auto"]
+			 * @type {String}
+			 * @default null
+			 * @since 5.0.12
+			 * @product highcharts
+			 */
 			axisLabelPosition: 'default',
+
+			/**
+			 * Provides the option to draw a frame around the charts by defining
+			 * a bottom, front and back panel.
+			 * 
+			 * @since 4.0
+			 * @product highcharts
+			 */
 			frame: {
+
+				/**
+				 * Whether the frames are visible.
+				 */
 				visible: 'default',
+
+				/**
+				 * General pixel thickness for the frame faces.
+				 */
 				size: 1,
-				bottom: {},
+
+				/**
+				 * The bottom of the frame around a 3D chart.
+				 * 
+				 * @since 4.0
+				 * @product highcharts
+				 */
+				bottom: {
+					/**
+					 * The color of the panel.
+					 * 
+					 * @type {Color}
+					 * @default transparent
+					 * @since 4.0
+					 * @product highcharts
+					 * @apioption chart.options3d.frame.bottom.color
+					 */
+
+					/**
+					 * The thickness of the panel.
+					 * 
+					 * @type {Number}
+					 * @default 1
+					 * @since 4.0
+					 * @product highcharts
+					 * @apioption chart.options3d.frame.bottom.size
+					 */
+
+					/**
+					 * Whether to display the frame. Possible values are `true`, `false`,
+					 * `"auto"` to display only the frames behind the data, and `"default"`
+					 * to display faces behind the data based on the axis layout, ignoring
+					 * the point of view.
+					 * 
+					 * @validvalue ["default", "auto", true, false]
+					 * @type {Boolean|String}
+					 * @sample {highcharts} highcharts/3d/scatter-frame/ Auto frames
+					 * @default default
+					 * @since 5.0.12
+					 * @product highcharts
+					 * @apioption chart.options3d.frame.bottom.visible
+					 */
+				},
+
+				/**
+				 * The top of the frame around a 3D chart.
+				 *
+				 * @extends {chart.options3d.frame.bottom}
+				 */
 				top: {},
+
+				/**
+				 * The left side of the frame around a 3D chart.
+				 *
+				 * @extends {chart.options3d.frame.bottom}
+				 */
 				left: {},
+
+				/**
+				 * The right of the frame around a 3D chart.
+				 *
+				 * @extends {chart.options3d.frame.bottom}
+				 */
 				right: {},
+
+				/**
+				 * The back side of the frame around a 3D chart.
+				 *
+				 * @extends {chart.options3d.frame.bottom}
+				 */
 				back: {},
+
+				/**
+				 * The front of the frame around a 3D chart.
+				 *
+				 * @extends {chart.options3d.frame.bottom}
+				 */
 				front: {}
 			}
 		}
 	}
-});
+};
+
+merge(true, defaultOptions, extendedOptions);
 
 /*= if (!build.classic) { =*/
 /**
@@ -276,7 +457,7 @@ wrap(Chart.prototype, 'drawChartBox', function (proceed) {
 		}
 
 		this.frameShapes.bottom[verb]({
-			class: 'highcharts-3d-frame highcharts-3d-frame-bottom',
+			'class': 'highcharts-3d-frame highcharts-3d-frame-bottom',
 			zIndex: frame.bottom.frontFacing ? -1000 : 1000,
 			faces: [
 				{ //bottom
@@ -312,7 +493,7 @@ wrap(Chart.prototype, 'drawChartBox', function (proceed) {
 			]
 		});
 		this.frameShapes.top[verb]({
-			class: 'highcharts-3d-frame highcharts-3d-frame-top',
+			'class': 'highcharts-3d-frame highcharts-3d-frame-top',
 			zIndex: frame.top.frontFacing ? -1000 : 1000,
 			faces: [
 				{ //bottom
@@ -348,7 +529,7 @@ wrap(Chart.prototype, 'drawChartBox', function (proceed) {
 			]
 		});
 		this.frameShapes.left[verb]({
-			class: 'highcharts-3d-frame highcharts-3d-frame-left',
+			'class': 'highcharts-3d-frame highcharts-3d-frame-left',
 			zIndex: frame.left.frontFacing ? -1000 : 1000,
 			faces: [
 				{ //bottom
@@ -384,7 +565,7 @@ wrap(Chart.prototype, 'drawChartBox', function (proceed) {
 			]
 		});
 		this.frameShapes.right[verb]({
-			class: 'highcharts-3d-frame highcharts-3d-frame-right',
+			'class': 'highcharts-3d-frame highcharts-3d-frame-right',
 			zIndex: frame.right.frontFacing ? -1000 : 1000,
 			faces: [
 				{ //bottom
@@ -420,7 +601,7 @@ wrap(Chart.prototype, 'drawChartBox', function (proceed) {
 			]
 		});
 		this.frameShapes.back[verb]({
-			class: 'highcharts-3d-frame highcharts-3d-frame-back',
+			'class': 'highcharts-3d-frame highcharts-3d-frame-back',
 			zIndex: frame.back.frontFacing ? -1000 : 1000,
 			faces: [
 				{ //bottom
@@ -456,7 +637,7 @@ wrap(Chart.prototype, 'drawChartBox', function (proceed) {
 			]
 		});
 		this.frameShapes.front[verb]({
-			class: 'highcharts-3d-frame highcharts-3d-frame-front',
+			'class': 'highcharts-3d-frame highcharts-3d-frame-front',
 			zIndex: frame.front.frontFacing ? -1000 : 1000,
 			faces: [
 				{ //bottom
@@ -539,19 +720,23 @@ Chart.prototype.get3dFrame = function () {
 		defaultShowFront = false,
 		defaultShowBack = true;
 
-	// The 'default' criteria to visible faces of the frame is looking up every axis to decide whenever the left/right//top/bottom sides of the frame will be shown
+	// The 'default' criteria to visible faces of the frame is looking up every
+	// axis to decide whenever the left/right//top/bottom sides of the frame
+	// will be shown
 	each([].concat(chart.xAxis, chart.yAxis, chart.zAxis), function (axis) {
-		if (axis.horiz) {
-			if (axis.opposite) {
-				defaultShowTop = true;
+		if (axis) {
+			if (axis.horiz) {
+				if (axis.opposite) {
+					defaultShowTop = true;
+				} else {
+					defaultShowBottom = true;
+				}
 			} else {
-				defaultShowBottom = true;
-			}
-		} else {
-			if (axis.opposite) {
-				defaultShowRight = true;
-			} else {
-				defaultShowLeft = true;
+				if (axis.opposite) {
+					defaultShowRight = true;
+				} else {
+					defaultShowLeft = true;
+				}
 			}
 		}
 	});
@@ -586,23 +771,62 @@ Chart.prototype.get3dFrame = function () {
 		};
 	};
 
+	// docs @TODO: Add all frame options (left, right, top, bottom, front, back) to
+	// apioptions JSDoc once the new system is up.
 	var ret = {
-		//FIXME: Previously, left/right, top/bottom and front/back pairs shared size and color.
-		//For compatibility and consistency sake, when one face have size/color/visibility set, the opposite face will default to the same values
-		//Also, left/right used to be called 'side', so that's also added as a fallback
-		bottom: getFaceOptions([frameOptions.bottom, frameOptions.top, frameOptions], bottomOrientation, defaultShowBottom),
-		top: getFaceOptions([frameOptions.top, frameOptions.bottom, frameOptions], topOrientation, defaultShowTop),
-		left: getFaceOptions([frameOptions.left, frameOptions.right, frameOptions.side, frameOptions], leftOrientation, defaultShowLeft),
-		right: getFaceOptions([frameOptions.right, frameOptions.left, frameOptions.side, frameOptions], rightOrientation, defaultShowRight),
-		back: getFaceOptions([frameOptions.back, frameOptions.front, frameOptions], backOrientation, defaultShowBack),
-		front: getFaceOptions([frameOptions.front, frameOptions.back, frameOptions], frontOrientation, defaultShowFront)
+		// FIXME: Previously, left/right, top/bottom and front/back pairs shared
+		// size and color.
+		// For compatibility and consistency sake, when one face have
+		// size/color/visibility set, the opposite face will default to the same
+		// values. Also, left/right used to be called 'side', so that's also
+		// added as a fallback
+		bottom: getFaceOptions(
+			[frameOptions.bottom, frameOptions.top, frameOptions],
+			bottomOrientation,
+			defaultShowBottom
+		),
+		top: getFaceOptions(
+			[frameOptions.top, frameOptions.bottom, frameOptions],
+			topOrientation,
+			defaultShowTop
+		),
+		left: getFaceOptions(
+			[
+				frameOptions.left,
+				frameOptions.right,
+				frameOptions.side,
+				frameOptions
+			],
+			leftOrientation,
+			defaultShowLeft
+		),
+		right: getFaceOptions(
+			[
+				frameOptions.right,
+				frameOptions.left,
+				frameOptions.side,
+				frameOptions
+			],
+			rightOrientation,
+			defaultShowRight
+		),
+		back: getFaceOptions(
+			[frameOptions.back, frameOptions.front, frameOptions],
+			backOrientation,
+			defaultShowBack
+		),
+		front: getFaceOptions(
+			[frameOptions.front, frameOptions.back, frameOptions],
+			frontOrientation,
+			defaultShowFront
+		)
 	};
 
 
 	// Decide the bast place to put axis title/labels based on the visible faces.
 	// Ideally, The labels can only be on the edge between a visible face and an invisble one.
 	// Also, the Y label should be one the left-most edge (right-most if opposite),
-	if (options3d.axisLabelPosition === 'auto') { // docs, see https://github.com/highcharts/highcharts/pull/6603#issuecomment-300243647
+	if (options3d.axisLabelPosition === 'auto') {
 		var isValidEdge = function (face1, face2) {
 			return (face1.visible !== face2.visible) ||
 				(face1.visible && face2.visible && (face1.frontFacing !== face2.frontFacing));
@@ -704,4 +928,35 @@ Chart.prototype.get3dFrame = function () {
 
 	return ret;
 };
+
+/**
+ * Note: As of v5.0.12, `frame.left` or `frame.right` should be used
+ * instead.
+ * 
+ * The side for the frame around a 3D chart.
+ * 
+ * @since 4.0
+ * @product highcharts
+ * @apioption chart.options3d.frame.side
+ */
+
+/**
+ * The color of the panel.
+ * 
+ * @type {Color}
+ * @default transparent
+ * @since 4.0
+ * @product highcharts
+ * @apioption chart.options3d.frame.side.color
+ */
+
+/**
+ * The thickness of the panel.
+ * 
+ * @type {Number}
+ * @default 1
+ * @since 4.0
+ * @product highcharts
+ * @apioption chart.options3d.frame.side.size
+ */
 

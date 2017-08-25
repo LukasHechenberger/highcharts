@@ -83,11 +83,30 @@ QUnit.test('textOverflow: ellipsis.', function (assert) {
     style.width = '1px';
     text1.destroy();
     text1 = chart.renderer.text('01234567', 0, 100).css(style).add();
-    console.log(text1);
     assert.strictEqual(
         text1.element.childNodes[0].innerHTML,
         '',
         'Width was too small for ellipsis.'
+    );
+
+    /**
+     * Rotation. Width determines the length of a rotated text
+     */
+    text1.destroy();
+    text2.destroy();
+    style.width = '50px';
+    text1 = chart.renderer.text('01234567', 0, 100).attr({
+        rotation: 90
+    }).css(style).add();
+    assert.strictEqual(
+        text1.element.childNodes[0].innerHTML.slice(-1),
+        '\u2026',
+        'Ellipsis was added to text node which has rotation.'
+    );
+    assert.strictEqual(
+        text1.getBBox().height < width,
+        true,
+        'Height of text is lower than style.width'
     );
 });
 
@@ -110,5 +129,21 @@ QUnit.test('BBox for mulitiple lines', function (assert) {
     assert.ok(
         !(/dy="\d/.test(outerHTML)),
         "Frist line shouldn't have dy (#6144) - visually the red text fits in the green box."
+    );
+});
+
+QUnit.test('HTML entities', function (assert) {
+    var ren = new Highcharts.SVGRenderer(
+        document.getElementById('container'),
+        500,
+        500
+    );
+
+    var text = ren.text('Hello &amp; &lt;tag&gt;', 10, 30).add();
+
+    assert.strictEqual(
+        text.element.textContent,
+        'Hello & <tag>',
+        'HTML entities decoded correctly'
     );
 });

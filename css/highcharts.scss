@@ -51,6 +51,9 @@ $highlight-color-10: #e6ebf5 !default; // Pressed button, color axis min color.
 .highcharts-emphasized {
     font-style: italic;
 }
+.highcharts-anchor {
+    cursor: pointer;
+}
 .highcharts-background {
     fill: $background-color;
 }
@@ -225,7 +228,7 @@ g.highcharts-series,
     fill-opacity: 0.25;
     stroke-width: 0;
 }
-.highcharts-point-select {
+.highcharts-series:not(.highcharts-pie-series) .highcharts-point-select {
     fill: $neutral-color-20;
     stroke: $neutral-color-100;
 }
@@ -247,10 +250,6 @@ g.highcharts-series,
 .highcharts-pie-series .highcharts-point-hover {
     fill-opacity: 0.75;
     transition: fill-opacity 50ms;
-}
-.highcharts-pie-series .highcharts-point-select {
-    fill: inherit;
-    stroke: inherit;
 }
 .highcharts-funnel-series .highcharts-point {
     stroke-linejoin: round;
@@ -527,11 +526,12 @@ input.highcharts-range-selector {
 .highcharts-ohlc-series .highcharts-point-hover {
     stroke-width: 3px;
 }
-.highcharts-flags-series .highcharts-point {
+.highcharts-flags-series .highcharts-point .highcharts-label-box {
     stroke: $neutral-color-40;
     fill: $background-color;
+    transition: fill 250ms;
 }
-.highcharts-flags-series .highcharts-point-hover {
+.highcharts-flags-series .highcharts-point-hover .highcharts-label-box {
     stroke: $neutral-color-100;
     fill: $highlight-color-20;
 }
