@@ -3075,17 +3075,14 @@ H.Series = H.seriesType('line', null, { // base series options
 	 */
 	getExtremes: function (yData) {
 		var xAxis = this.xAxis,
-			yAxis = this.yAxis,
 			xData = this.processedXData,
 			yDataLength,
-			activeYData = [],
-			activeCounter = 0,
-			// #2117, need to compensate for log X axis
 			xExtremes = xAxis.getExtremes(),
 			xMin = xExtremes.min,
 			xMax = xExtremes.max,
-			validValue,
-			withinRange,
+			min = Infinity,
+			max = -Infinity,
+			test,
 			x,
 			y,
 			i,
@@ -3095,38 +3092,29 @@ H.Series = H.seriesType('line', null, { // base series options
 		yDataLength = yData.length;
 
 		for (i = 0; i < yDataLength; i++) {
-
 			x = xData[i];
-			y = yData[i];
+			test = xData[i + 1] || x;
 
-			// For points within the visible range, including the first point
-			// outside the visible range (#7061), consider y extremes.
-			validValue =
-				(isNumber(y, true) || isArray(y)) &&
-				(!yAxis.positiveValuesOnly || (y.length || y > 0));
-			withinRange =
-				this.getExtremesFromAll ||
-				this.options.getExtremesFromAll ||
-				this.cropped ||
-				((xData[i + 1] || x) >= xMin &&	(xData[i - 1] || x) <= xMax);
-
-			if (validValue && withinRange) {
-
+			if (test >= xMin && test <= xMax) {
+				y = yData[i];
 				j = y.length;
+
 				if (j) { // array, like ohlc or range data
 					while (j--) {
 						if (y[j] !== null) {
-							activeYData[activeCounter++] = y[j];
+							min = Math.min(y[j], min);
+							max = Math.max(y[j], max);
 						}
 					}
 				} else {
-					activeYData[activeCounter++] = y;
+					min = Math.min(y, min);
+					max = Math.max(y, max);
 				}
 			}
 		}
 
-		this.dataMin = arrayMin(activeYData);
-		this.dataMax = arrayMax(activeYData);
+		this.dataMin = min;
+		this.dataMax = max;
 	},
 
 	/**
