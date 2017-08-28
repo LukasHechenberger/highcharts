@@ -2909,24 +2909,10 @@ H.Series = H.seriesType('line', null, { // base series options
 			cropEnd = dataLength,
 			// line-type series need one point outside
 			cropShoulder = pick(this.cropShoulder, 1),
-			i,
-			j;
+			binarySearch = H.binarySearch;
 
-		// iterate up to find slice start
-		for (i = 0; i < dataLength; i++) {
-			if (xData[i] >= min) {
-				cropStart = Math.max(0, i - cropShoulder);
-				break;
-			}
-		}
-
-		// proceed to find slice end
-		for (j = i; j < dataLength; j++) {
-			if (xData[j] > max) {
-				cropEnd = j + cropShoulder;
-				break;
-			}
-		}
+		cropStart = Math.max(binarySearch(xData, min) - cropShoulder, 0);
+		cropEnd = binarySearch(xData, max) + cropShoulder + 1;
 
 		return {
 			xData: xData.slice(cropStart, cropEnd),

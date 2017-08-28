@@ -2013,6 +2013,43 @@ H.uniqueKey = (function () {
 }());
 
 /**
+ * Returns the index of the item matching `match` or the index of the item whose
+ * value is nearest to match. **Works only in sorted arrays.**
+ * @param {Array} arr The array to search (must be sorted).
+ * @param {*} match The value to search for.
+ * @return {number} The index of the best match.
+ */
+H.binarySearch = function(arr, match) {
+	var low = 0,
+		high = arr.length - 1,
+		mid,
+		current;
+
+	while (low <= high) {
+		mid = parseInt((low + high) / 2, 10);
+		current = arr[mid];
+
+		if (current > match) {
+			high = mid - 1;
+		} else if (current < match) {
+			low = mid + 1;
+		} else {
+			return mid;
+		}
+	}
+
+	if (mid > 0) {
+		var last = mid - 1;
+
+		if ((arr[mid] - match) > (match - arr[last])) {
+			return last;
+		}
+	}
+
+	return mid;
+};
+
+/**
  * Register Highcharts as a plugin in jQuery
  */
 if (win.jQuery) {
