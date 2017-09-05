@@ -17,6 +17,7 @@ var addEvent = H.addEvent,
 	css = H.css,
 	defaultOptions = H.defaultOptions,
 	defaultPlotOptions = H.defaultPlotOptions,
+	defined = H.defined,
 	each = H.each,
 	extend = H.extend,
 	fireEvent = H.fireEvent,
@@ -335,7 +336,18 @@ extend(Chart.prototype, /** @lends Chart.prototype */ {
 	 * @private
 	 */
 	zoomOut: function () {
-		var chart = this;
+    var chart = this,
+			zoomType = chart.options.chart.zoomType;
+
+		if (
+			!defined(zoomType) ||
+      zoomType === 'x' && !defined(chart.xAxis[0].userMin) ||
+      zoomType === 'y' && !defined(chart.yAxis[0].userMin) ||
+			zoomType === 'xy' && !defined(chart.xAxis[0].userMin) && !defined(chart.yAxis[0].userMin)
+		) {
+			return;
+		}
+
 		fireEvent(chart, 'selection', { resetSelection: true }, function () {
 			chart.zoom();
 		});
