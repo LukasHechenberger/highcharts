@@ -620,6 +620,11 @@ extend(SVGElement.prototype, /** @lends Highcharts.SVGElement.prototype */ {
 	 * @returns {SVGElement} Return the SVG element for chainability.
 	 */
 	addClass: function (className, replace) {
+		if (replace) {
+			this.className = className;
+			return this;
+		}
+
 		var currentClassName = this.attr('class') || '';
 		if (currentClassName.indexOf(className) === -1) {
 			if (!replace) {
