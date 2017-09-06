@@ -14,7 +14,7 @@ import H from './Globals.js';
  *
  * @example
  * var chart = Highcharts.chart('container', { ... });
- * 
+ *
  * @namespace Highcharts
  */
 
@@ -30,11 +30,11 @@ var charts = H.charts,
  *
  * @function #error
  * @memberOf Highcharts
- * @param {Number|String} code - The error code. See [errors.xml]{@link 
+ * @param {Number|String} code - The error code. See [errors.xml]{@link
  *     https://github.com/highcharts/highcharts/blob/master/errors/errors.xml}
  *     for available codes. If it is a string, the error message is printed
  *     directly in the console.
- * @param {Boolean} [stop=false] - Whether to throw an error or just log a 
+ * @param {Boolean} [stop=false] - Whether to throw an error or just log a
  *     warning in the console.
  *
  * @sample highcharts/chart/highcharts-error/ Custom error handler
@@ -74,7 +74,7 @@ H.Fx = function (elem, options, prop) {
 	this.prop = prop;
 };
 H.Fx.prototype = {
-	
+
 	/**
 	 * Set the current step of a path definition on SVGElement.
 	 *
@@ -135,7 +135,7 @@ H.Fx.prototype = {
 		} else {
 			elem.style[prop] = now + this.unit;
 		}
-		
+
 		if (step) {
 			step.call(elem, now, this);
 		}
@@ -150,7 +150,7 @@ H.Fx.prototype = {
 	 * @param {Number} from - The current value, value to start from.
 	 * @param {Number} to - The end value, value to land on.
 	 * @param {String} [unit] - The property unit, for example `px`.
-	 * 
+	 *
 	 */
 	run: function (from, to, unit) {
 		var self = this,
@@ -171,7 +171,7 @@ H.Fx.prototype = {
 
 		if (timer() && timers.push(timer) === 1) {
 			timer.timerId = setInterval(function () {
-				
+
 				for (i = 0; i < timers.length; i++) {
 					if (!timers[i]()) {
 						timers.splice(i--, 1);
@@ -184,7 +184,7 @@ H.Fx.prototype = {
 			}, 13);
 		}
 	},
-	
+
 	/**
 	 * Run a single step in the animation.
 	 *
@@ -203,7 +203,7 @@ H.Fx.prototype = {
 			complete = options.complete,
 			duration = options.duration,
 			curAnim = options.curAnim;
-		
+
 		if (elem.attr && !elem.element) { // #2616, element is destroyed
 			ret = false;
 
@@ -215,7 +215,7 @@ H.Fx.prototype = {
 			curAnim[this.prop] = true;
 
 			done = true;
-			
+
 			H.objectEach(curAnim, function (val) {
 				if (val !== true) {
 					done = false;
@@ -298,16 +298,16 @@ H.Fx.prototype = {
 		}
 
 		/**
-		 * If shifting points, prepend a dummy point to the end path. 
+		 * If shifting points, prepend a dummy point to the end path.
 		 */
 		function prepend(arr, other) {
 			while (arr.length < fullLength) {
-				
+
 				// Move to, line to or curve to?
 				arr[0] = other[fullLength - arr.length];
 
 				// Prepend a copy of the first point
-				insertSlice(arr, arr.slice(0, numParams), 0);	
+				insertSlice(arr, arr.slice(0, numParams), 0);
 
 				// For areas, the bottom path goes back again to the left, so we
 				// need to append a copy of the last point.
@@ -334,21 +334,21 @@ H.Fx.prototype = {
 				// is sliced out. In an area graph, the positionFactor is 2,
 				// causing the middle two points to be sliced out, since an area
 				// path starts at left, follows the upper path then turns and
-				// follows the bottom back. 
+				// follows the bottom back.
 				slice = arr.slice().splice(
-					(arr.length / positionFactor) - numParams, 
+					(arr.length / positionFactor) - numParams,
 					numParams * positionFactor
 				);
 
 				// Move to, line to or curve to?
 				slice[0] = other[fullLength - numParams - (i * numParams)];
-				
+
 				// Disable first control point
 				if (bezier) {
 					slice[numParams - 6] = slice[numParams - 2];
 					slice[numParams - 5] = slice[numParams - 1];
 				}
-				
+
 				// Now insert the slice, either in the middle (for areas) or at
 				// the end (for lines)
 				insertSlice(arr, slice, arr.length / positionFactor);
@@ -387,10 +387,10 @@ H.Fx.prototype = {
 
 		if (start.length && H.isNumber(shift)) {
 
-			// The common target length for the start and end array, where both 
+			// The common target length for the start and end array, where both
 			// arrays are padded in opposite ends
 			fullLength = end.length + shift * positionFactor * numParams;
-			
+
 			if (!reverse) {
 				prepend(end, start);
 				append(start, end);
@@ -407,7 +407,7 @@ H.Fx.prototype = {
 /**
  * Handle animation of the color attributes directly.
  */
-H.Fx.prototype.fillSetter = 
+H.Fx.prototype.fillSetter =
 H.Fx.prototype.strokeSetter = function () {
 	this.elem.attr(
 		this.prop,
@@ -441,7 +441,6 @@ H.extend = function (a, b) {
 /**
  * Utility function to deep merge two or more objects and return a third object.
  * If the first argument is true, the contents of the second object is copied
- * into the first object. The merge function can also be used with a single 
  * object argument to create a deep copy of an object.
  *
  * @function #merge
@@ -451,7 +450,7 @@ H.extend = function (a, b) {
  * @param {Object} a - The first object to extend. When only this is given, the
           function returns a deep copy.
  * @param {...Object} [n] - An object to merge into the previous one.
- * @returns {Object} - The merged object. If the first argument is true, the 
+ * @returns {Object} - The merged object. If the first argument is true, the
  * return is the same as the second argument.
  */
 H.merge = function () {
@@ -725,7 +724,7 @@ H.pick = function () {
  * @memberOf Highcharts
  * @param {HTMLDOMElement} el - A HTML DOM element.
  * @param {CSSObject} styles - Style object with camel case property names.
- * 
+ *
  */
 H.css = function (el, styles) {
 	if (H.isMS && !H.svg) { // #2686
@@ -820,7 +819,7 @@ H.pad = function (number, length, padder) {
  * @param  {number} base
  *         The full length that represents 100%.
  * @param  {number} [offset=0]
- *         A pixel offset to apply for percentage values. Used internally in 
+ *         A pixel offset to apply for percentage values. Used internally in
  *         axis positioning.
  * @return {number}
  *         The computed length.
@@ -842,7 +841,7 @@ H.relativeLength = function (value, base, offset) {
  * @param {Function} func - A wrapper function callback. This function is called
  *        with the same arguments as the original function, except that the
  *        original function is unshifted and passed as the first argument.
- * 
+ *
  */
 H.wrap = function (obj, method, func) {
 	var proceed = obj[method];
@@ -910,7 +909,7 @@ H.dateFormat = function (format, timestamp, capitalize) {
 		shortWeekdays = lang.shortWeekdays,
 		pad = H.pad,
 
-		// List all format keys. Custom formats can be added from the outside. 
+		// List all format keys. Custom formats can be added from the outside.
 		replacements = H.extend(
 			{
 
@@ -964,7 +963,7 @@ H.dateFormat = function (format, timestamp, capitalize) {
 				// Milliseconds (naming from Ruby)
 				'L': pad(Math.round(timestamp % 1000), 3)
 			},
-			
+
 			/**
 			 * A hook for defining additional date format specifiers. New
 			 * specifiers are defined as key-value pairs by using the specifier
@@ -1133,7 +1132,7 @@ H.getMagnitude = function (num) {
  */
 H.normalizeTickInterval = function (interval, multiples, magnitude,
 		allowDecimals, hasTickAmount) {
-	var normalized, 
+	var normalized,
 		i,
 		retInterval = interval;
 
@@ -1143,7 +1142,7 @@ H.normalizeTickInterval = function (interval, multiples, magnitude,
 
 	// multiples for a linear scale
 	if (!multiples) {
-		multiples = hasTickAmount ? 
+		multiples = hasTickAmount ?
 			// Finer grained ticks when the tick amount is hard set, including
 			// when alignTicks is true on multiple axes (#4580).
 			[1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10] :
@@ -1168,20 +1167,20 @@ H.normalizeTickInterval = function (interval, multiples, magnitude,
 	for (i = 0; i < multiples.length; i++) {
 		retInterval = multiples[i];
 		// only allow tick amounts smaller than natural
-		if ((hasTickAmount && retInterval * magnitude >= interval) || 
+		if ((hasTickAmount && retInterval * magnitude >= interval) ||
 				(!hasTickAmount && (normalized <= (multiples[i] +
 				(multiples[i + 1] || multiples[i])) / 2))) {
 			break;
 		}
 	}
 
-	// Multiply back to the correct magnitude. Correct floats to appropriate 
+	// Multiply back to the correct magnitude. Correct floats to appropriate
 	// precision (#6085).
 	retInterval = H.correctFloat(
 		retInterval * magnitude,
 		-Math.round(Math.log(0.001) / Math.LN10)
 	);
-	
+
 	return retInterval;
 };
 
@@ -1193,9 +1192,9 @@ H.normalizeTickInterval = function (interval, multiples, magnitude,
  * @function #stableSort
  * @memberOf Highcharts
  * @param {Array} arr - The array to sort.
- * @param {Function} sortFunction - The function to sort it with, like with 
+ * @param {Function} sortFunction - The function to sort it with, like with
  *        regular Array.prototype.sort.
- * 
+ *
  */
 H.stableSort = function (arr, sortFunction) {
 	var length = arr.length,
@@ -1272,7 +1271,7 @@ H.arrayMax = function (data) {
  * @param {Object} obj - The object to destroy properties on.
  * @param {Object} [except] - Exception, do not destroy this property, only
  *    delete it.
- * 
+ *
  */
 H.destroyObjectProperties = function (obj, except) {
 	H.objectEach(obj, function (val, n) {
@@ -1281,7 +1280,7 @@ H.destroyObjectProperties = function (obj, except) {
 			// Invoke the destroy
 			val.destroy();
 		}
-		
+
 		// Delete the property from the object.
 		delete obj[n];
 	});
@@ -1294,7 +1293,7 @@ H.destroyObjectProperties = function (obj, except) {
  * @function #discardElement
  * @memberOf Highcharts
  * @param {HTMLDOMElement} element - The HTML node to discard.
- * 
+ *
  */
 H.discardElement = function (element) {
 	var garbageBin = H.garbageBin;
@@ -1338,7 +1337,7 @@ H.correctFloat = function (num, prec) {
  * @memberOf Highcharts
  * @param {Boolean|Animation} animation - The animation object.
  * @param {Object} chart - The chart instance.
- * 
+ *
  * @todo This function always relates to a chart, and sets a property on the
  *        renderer, so it should be moved to the SVGRenderer.
  */
@@ -1534,7 +1533,7 @@ H.grep = function (arr, callback) {
 };
 
 /**
- * Return the value of the first element in the array that satisfies the 
+ * Return the value of the first element in the array that satisfies the
  * provided testing function.
  *
  * @function #find
@@ -1555,7 +1554,7 @@ H.find = function (arr, callback) {
  * @function #map
  * @memberOf Highcharts
  * @param {Array} arr - The array to map.
- * @param {Function} fn - The callback function. Return the new value for the 
+ * @param {Function} fn - The callback function. Return the new value for the
  *        new array.
  * @returns {Array} - A new array item with modified items.
  */
@@ -1606,7 +1605,7 @@ H.offset = function (el) {
  * @param {SVGElement} el - The SVGElement to stop animation on.
  * @param {string} [prop] - The property to stop animating. If given, the stop
  *    method will stop a single property from animating, while others continue.
- * 
+ *
  */
 H.stop = function (el, prop) {
 
@@ -1664,12 +1663,12 @@ H.objectEach = function (obj, fn, ctx) {
  * @param {Object} el - The element or object to add a listener to. It can be a
  *        {@link HTMLDOMElement}, an {@link SVGElement} or any other object.
  * @param {String} type - The event type.
- * @param {Function} fn - The function callback to execute when the event is 
+ * @param {Function} fn - The function callback to execute when the event is
  *        fired.
  * @returns {Function} A callback function to remove the added event.
  */
 H.addEvent = function (el, type, fn) {
-	
+
 	var events = el.hcEvents = el.hcEvents || {};
 
 	function wrappedFn(e) {
@@ -1721,10 +1720,10 @@ H.addEvent = function (el, type, fn) {
  *        events are removed from the element.
  * @param {Function} [fn] - The specific callback to remove. If undefined, all
  *        events that match the element and optionally the type are removed.
- * 
+ *
  */
 H.removeEvent = function (el, type, fn) {
-	
+
 	var events,
 		hcEvents = el.hcEvents,
 		index;
@@ -1795,9 +1794,9 @@ H.removeEvent = function (el, type, fn) {
  * @param {String} type - The type of event.
  * @param {Object} [eventArguments] - Custom event arguments that are passed on
  *        as an argument to the event handler.
- * @param {Function} [defaultFunction] - The default function to execute if the 
+ * @param {Function} [defaultFunction] - The default function to execute if the
  *        other listeners haven't returned false.
- * 
+ *
  */
 H.fireEvent = function (el, type, eventArguments, defaultFunction) {
 	var e,
@@ -1823,7 +1822,7 @@ H.fireEvent = function (el, type, eventArguments, defaultFunction) {
 		}
 
 	} else if (hcEvents) {
-		
+
 		events = hcEvents[type] || [];
 		len = events.length;
 
@@ -1841,12 +1840,12 @@ H.fireEvent = function (el, type, eventArguments, defaultFunction) {
 				target: el,
 				// If the type is not set, we're running a custom event (#2297).
 				// If it is set, we're running a browser event, and setting it
-				// will cause en error in IE8 (#2465).		
+				// will cause en error in IE8 (#2465).
 				type: type
 			});
 		}
 
-		
+
 		for (i = 0; i < len; i++) {
 			fn = events[i];
 
@@ -1857,7 +1856,7 @@ H.fireEvent = function (el, type, eventArguments, defaultFunction) {
 			}
 		}
 	}
-			
+
 	// Run the default if not prevented
 	if (defaultFunction && !eventArguments.defaultPrevented) {
 		defaultFunction(eventArguments);
@@ -1917,10 +1916,10 @@ H.animate = function (el, params, opt) {
 	H.objectEach(params, function (val, prop) {
 		// Stop current running animation of this property
 		H.stop(el, prop);
-		
+
 		fx = new H.Fx(el, opt, prop);
 		end = null;
-		
+
 		if (prop === 'd') {
 			fx.paths = fx.initPath(
 				el,
@@ -1938,7 +1937,7 @@ H.animate = function (el, params, opt) {
 				unit = 'px';
 			}
 		}
-		
+
 		if (!end) {
 			end = val;
 		}
@@ -1974,10 +1973,10 @@ H.seriesType = function (type, parent, options, props, pointProps) {
 
 	// Merge the options
 	defaultOptions.plotOptions[type] = H.merge(
-		defaultOptions.plotOptions[parent], 
+		defaultOptions.plotOptions[parent],
 		options
 	);
-	
+
 	// Create the class
 	seriesTypes[type] = H.extendClass(seriesTypes[parent] ||
 		function () {}, props);
@@ -1994,7 +1993,7 @@ H.seriesType = function (type, parent, options, props, pointProps) {
 
 /**
  * Get a unique key for using in internal element id's and pointers. The key
- * is composed of a random hash specific to this Highcharts instance, and a 
+ * is composed of a random hash specific to this Highcharts instance, and a
  * counter.
  * @function #uniqueKey
  * @memberOf Highcharts
@@ -2003,7 +2002,7 @@ H.seriesType = function (type, parent, options, props, pointProps) {
  * var id = H.uniqueKey(); // => 'highcharts-x45f6hp-0'
  */
 H.uniqueKey = (function () {
-	
+
 	var uniqueKeyHash = Math.random().toString(36).substring(2, 9),
 		idCounter = 0;
 
@@ -2083,7 +2082,7 @@ if (doc && !doc.defaultView) {
 	H.getStyle = function (el, prop) {
 		var val,
 			alias = { width: 'clientWidth', height: 'clientHeight' }[prop];
-			
+
 		if (el.style[prop]) {
 			return H.pInt(el.style[prop]);
 		}
@@ -2096,26 +2095,26 @@ if (doc && !doc.defaultView) {
 			el.style.zoom = 1;
 			return Math.max(el[alias] - 2 * H.getStyle(el, 'padding'), 0);
 		}
-		
+
 		val = el.currentStyle[prop.replace(/\-(\w)/g, function (a, b) {
 			return b.toUpperCase();
 		})];
 		if (prop === 'filter') {
 			val = val.replace(
-				/alpha\(opacity=([0-9]+)\)/, 
-				function (a, b) { 
-					return b / 100; 
+				/alpha\(opacity=([0-9]+)\)/,
+				function (a, b) {
+					return b / 100;
 				}
 			);
 		}
-		
+
 		return val === '' ? 1 : H.pInt(val);
 	};
 }
 
 if (!Array.prototype.forEach) {
 	H.each = function (arr, fn, ctx) { // legacy
-		var i = 0, 
+		var i = 0,
 			len = arr.length;
 		for (; i < len; i++) {
 			if (fn.call(ctx, arr[i], i, arr) === false) {
@@ -2127,12 +2126,12 @@ if (!Array.prototype.forEach) {
 
 if (!Array.prototype.indexOf) {
 	H.inArray = function (item, arr) {
-		var len, 
+		var len,
 			i = 0;
 
 		if (arr) {
 			len = arr.length;
-			
+
 			for (; i < len; i++) {
 				if (arr[i] === item) {
 					return i;
