@@ -3622,7 +3622,7 @@ H.extend(Axis.prototype, /** @lends Highcharts.Axis.prototype */{
 			if (!graphic) {
 				this.cross = graphic = this.chart.renderer
 					.path()
-					.addClass('highcharts-crosshair highcharts-crosshair-' + 
+					.addClass('highcharts-crosshair highcharts-crosshair-' +
 						(categorized ? 'category ' : 'thin ') + options.className)
 					.attr({
 						zIndex: pick(options.zIndex, 2)
