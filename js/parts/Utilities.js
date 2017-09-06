@@ -701,7 +701,7 @@ H.pick = function () {
 		length = args.length;
 	for (i = 0; i < length; i++) {
 		arg = args[i];
-		if (arg !== undefined && arg !== null) {
+		if (H.defined(arg)) {
 			return arg;
 		}
 	}
