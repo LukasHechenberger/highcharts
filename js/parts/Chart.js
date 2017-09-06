@@ -73,7 +73,7 @@ var Chart = H.Chart = function () {
 };
 
 /**
- * Factory function for basic charts. 
+ * Factory function for basic charts.
  *
  * @function #chart
  * @memberOf Highcharts
@@ -114,7 +114,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 	 */
 	getArgs: function () {
 		var args = [].slice.call(arguments);
-		
+
 		// Remove the optional first argument, renderTo, and
 		// set it on this.
 		if (isString(args[0]) || args[0].nodeName) {
@@ -208,7 +208,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		 * @sample highcharts/members/title-update/
 		 *         Updating titles
 		 */
-		
+
 		/**
 		 * The chart subtitle. The subtitle has an `update` method that allows
 		 * modifying the options directly or indirectly via `chart.update`.
@@ -321,7 +321,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		for (; i < series.length; i++) {
 			if (series[i]) {
 				series[i].index = i;
-				series[i].name = series[i].name || 
+				series[i].name = series[i].name ||
 					'Series ' + (series[i].index + 1);
 			}
 		}
@@ -383,9 +383,9 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		if (chart.setResponsive) {
 			chart.setResponsive(false);
 		}
-			
+
 		H.setAnimation(animation, chart);
-		
+
 		if (isHiddenChart) {
 			chart.temporaryDisplay();
 		}
@@ -465,7 +465,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 			});
 
 			// redraw axes
-			each(axes, function (axis) {
+			each(axes, function redrawAxis(axis) {
 
 				// Fire 'afterSetExtremes' only if extremes are set
 				var key = axis.min + ',' + axis.max;
@@ -492,7 +492,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		fireEvent(chart, 'predraw');
 
 		// redraw affected series
-		each(series, function (serie) {
+		each(series, function redrawSeries(serie) {
 			if ((isDirtyBox || serie.isDirty) && serie.visible) {
 				serie.redraw();
 			}
@@ -542,7 +542,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 			return item.id === id || (item.options && item.options.id === id);
 		}
 
-		ret = 
+		ret =
 			// Search axes
 			find(this.axes, itemById) ||
 
@@ -617,7 +617,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 	 * the legend item if {@link
 	 * https://api.highcharts.com/highcharts/plotOptions.series.showCheckbox|
 	 * series.showCheckBox} is true.
-	 * 
+	 *
 	 * @return {Array.<Highcharts.Series>}
 	 *         The currently selected series.
 	 *
@@ -640,7 +640,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 	 *         New subtitle options. The subtitle text itself is set by the
 	 *         `subtitleOptions.text` property.
 	 * @param  redraw {Boolean}
-	 *         Whether to redraw the chart or wait for a later call to 
+	 *         Whether to redraw the chart or wait for a later call to
 	 *         `chart.redraw()`.
 	 *
 	 * @sample highcharts/members/chart-settitle/ Set title text and styles
@@ -659,7 +659,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 				style: {
 					color: '${palette.neutralColor80}',
 					fontSize: options.isStock ? '16px' : '18px' // #2944
-				}	
+				}
 			},
 			/*= } =*/
 			options.title,
@@ -671,7 +671,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 			{
 				style: {
 					color: '${palette.neutralColor60}'
-				}	
+				}
 			},
 			/*= } =*/
 			options.subtitle,
@@ -715,7 +715,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 				// Presentational
 				chart[name].css(chartTitleOptions.style);
 				/*= } =*/
-				
+
 			}
 		});
 		chart.layOutTitles(redraw);
@@ -723,7 +723,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 
 	/**
 	 * Internal function to lay out the chart titles and cache the full offset
-	 * height for use in `getMargins`. The result is stored in 
+	 * height for use in `getMargins`. The result is stored in
 	 * `this.titleOffset`.
 	 *
 	 * @private
@@ -748,13 +748,13 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 				titleSize = titleOptions.style.fontSize;
 				/*= } =*/
 				titleSize = renderer.fontMetrics(titleSize, title).b;
-				
+
 				title
 					.css({
 						width: (titleOptions.width ||
 							spacingBox.width + titleOptions.widthAdjust) + 'px'
 					})
-					.align(extend({ 
+					.align(extend({
 						y: offset + titleSize
 					}, titleOptions), false, 'spacingBox');
 
@@ -799,7 +799,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		if (!defined(heightOption)) {
 			chart.containerHeight = getStyle(renderTo, 'height');
 		}
-		
+
 		/**
 		 * The current pixel width of the chart.
 		 *
@@ -834,7 +834,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 	 * size is retrieved, reset them. Used on first render and on redraws.
 	 *
 	 * @private
-	 * 
+	 *
 	 * @param  {Boolean} revert
 	 *         Revert to the saved original styles.
 	 */
@@ -867,7 +867,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 					if (node !== this.renderTo) {
 						tempStyle.height = 0;
 					}
-					
+
 					H.css(node, tempStyle);
 
 					// If it still doesn't have an offset width after setting
@@ -900,7 +900,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 
 	/**
 	 * Set the {@link Chart.container|chart container's} class name, in
-	 * addition to `highcharts-container`. 
+	 * addition to `highcharts-container`.
 	 */
 	setClassName: function (className) {
 		this.container.className = 'highcharts-container ' + (className || '');
@@ -930,7 +930,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		if (!renderTo) {
 			chart.renderTo = renderTo = optionsChart.renderTo;
 		}
-		
+
 		if (isString(renderTo)) {
 			chart.renderTo = renderTo = doc.getElementById(renderTo);
 		}
@@ -1037,7 +1037,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		for (key in options.defs) {
 			this.renderer.definition(options.defs[key]);
 		}
-		/*= } =*/		
+		/*= } =*/
 
 		// Add a reference to the charts index
 		chart.renderer.chartIndex = chart.index;
@@ -1170,7 +1170,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 	},
 
 	/**
-	 * Add the event handlers necessary for auto resizing, depending on the 
+	 * Add the event handlers necessary for auto resizing, depending on the
 	 * `chart.events.reflow` option.
 	 *
 	 * @private
@@ -1178,7 +1178,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 	initReflow: function () {
 		var chart = this,
 			unbind;
-		
+
 		unbind = addEvent(win, 'resize', function (e) {
 			chart.reflow(e);
 		});
@@ -1226,7 +1226,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 
 		// Handle the isResizing counter
 		chart.isResizing += 1;
-		
+
 		// set the animation for the current process
 		H.setAnimation(animation, chart);
 
@@ -1318,7 +1318,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		 * @type {Number}
 		 */
 		chart.plotLeft = plotLeft = Math.round(chart.plotLeft);
-		
+
 		/**
 		 * The current top position of the plot area in pixels.
 		 *
@@ -1339,7 +1339,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 			0,
 			Math.round(chartWidth - plotLeft - chart.marginRight)
 		);
-		
+
 		/**
 		 * The current height of the plot area in pixels.
 		 *
@@ -1375,13 +1375,13 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		clipX = Math.ceil(clipOffsetSide(3));
 		clipY = Math.ceil(clipOffsetSide(0));
 		chart.clipBox = {
-			x: clipX, 
-			y: clipY, 
+			x: clipX,
+			y: clipY,
 			width: Math.floor(
 				chart.plotSizeX -
 				clipOffsetSide(1) -
 				clipX
-			), 
+			),
 			height: Math.max(
 				0,
 				Math.floor(
@@ -1516,7 +1516,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 				fill: plotBackgroundColor || 'none'
 			})
 			.shadow(optionsChart.plotShadow);
-		
+
 		// Create the background image
 		if (plotBackgroundImage) {
 			if (!plotBGImage) {
@@ -1532,7 +1532,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 			}
 		}
 		/*= } =*/
-		
+
 		// Plot clip
 		if (!clipRect) {
 			chart.clipRect = renderer.clipRect(clipBox);
@@ -1598,7 +1598,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 				optionsChart.defaultSeriesType];
 
 			// Get the value from available chart-wide properties
-			value = 
+			value =
 				optionsChart[key] || // It is set in the options
 				(klass && klass.prototype[key]); // The default series class
 					// requires it
@@ -1619,7 +1619,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 	},
 
 	/**
-	 * Internal function to link two or more series together, based on the 
+	 * Internal function to link two or more series together, based on the
 	 * `linkedTo` option. This is done from `Chart.render`, and after
 	 * `Chart.addSeries` and `Series.remove`.
 	 *
@@ -1883,7 +1883,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 		while (i--) {
 			axes[i] = axes[i].destroy();
 		}
-		
+
 		// Destroy scroller & scroller series before destroying base series
 		if (this.scroller && this.scroller.destroy) {
 			this.scroller.destroy();
@@ -2016,7 +2016,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 
 	},
 
-	/** 
+	/**
 	 * Internal function that runs on chart load, async if any images are loaded
 	 * in the chart. Runs the callbacks and triggers the `load` and `render`
 	 * events.
@@ -2034,7 +2034,7 @@ extend(Chart.prototype, /** @lends Highcharts.Chart.prototype */ {
 
 		fireEvent(this, 'load');
 		fireEvent(this, 'render');
-		
+
 
 		// Set up auto resize, check for not destroyed (#6068)
 		if (defined(this.index) && this.options.chart.reflow !== false) {
