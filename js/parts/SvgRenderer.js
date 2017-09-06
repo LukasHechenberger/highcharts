@@ -3899,6 +3899,8 @@ extend(SVGRenderer.prototype, /** @lends Highcharts.SVGRenderer.prototype */ {
 			 * @ignore
 			 */
 			destroy: function () {
+				/* wrapper.element.parentNode.removeChild(wrapper.element);
+				wrapper = null; */
 
 				// Added by button implementation
 				removeEvent(wrapper.element, 'mouseenter');
