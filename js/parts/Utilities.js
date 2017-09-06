@@ -1232,9 +1232,7 @@ H.arrayMin = function (data) {
 		min = data[0];
 
 	while (i--) {
-		if (data[i] < min) {
-			min = data[i];
-		}
+		min = Math.min(data[i], min);
 	}
 	return min;
 };
@@ -1254,9 +1252,7 @@ H.arrayMax = function (data) {
 		max = data[0];
 
 	while (i--) {
-		if (data[i] > max) {
-			max = data[i];
-		}
+		max = Math.max(data[i], max);
 	}
 	return max;
 };
