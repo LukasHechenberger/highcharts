@@ -3061,14 +3061,16 @@ H.Series = H.seriesType('line', null, { // base series options
 	 */
 	getExtremes: function (yData) {
 		var xAxis = this.xAxis,
+			yAxis = this.yAxis,
 			xData = this.processedXData,
 			yDataLength,
 			xExtremes = xAxis.getExtremes(),
 			xMin = xExtremes.min,
 			xMax = xExtremes.max,
+			validValue,
+			withinRange,
 			min = Infinity,
 			max = -Infinity,
-			test,
 			x,
 			y,
 			i,
@@ -3079,12 +3081,22 @@ H.Series = H.seriesType('line', null, { // base series options
 
 		for (i = 0; i < yDataLength; i++) {
 			x = xData[i];
-			test = xData[i + 1] || x;
+			y = yData[i];
 
-			if (test >= xMin && test <= xMax) {
-				y = yData[i];
+			// For points within the visible range, including the first point
+			// outside the visible range (#7061), consider y extremes.
+			validValue =
+				(isNumber(y, true) || isArray(y)) &&
+				(!yAxis.positiveValuesOnly || (y.length || y > 0));
+			withinRange =
+				this.getExtremesFromAll ||
+				this.options.getExtremesFromAll ||
+				this.cropped ||
+				((xData[i + 1] || x) >= xMin &&	(xData[i - 1] || x) <= xMax);
+
+			if (validValue && withinRange) {
+
 				j = y.length;
-
 				if (j) { // array, like ohlc or range data
 					while (j--) {
 						if (y[j] !== null) {
