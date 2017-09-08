@@ -1305,10 +1305,6 @@ H.discardElement = function (element) {
 	garbageBin.innerHTML = '';
 };
 
-var precisionFactor = {
-	14: Math.pow(10, 14)
-};
-
 /**
  * Fix JS round off float errors.
  *
@@ -1319,10 +1315,9 @@ var precisionFactor = {
  * @returns {Number} The corrected float number.
  */
 H.correctFloat = function (num, prec) {
-	var p = prec || 14;
-	var factor = precisionFactor[p] || (precisionFactor[p] = Math.pow(10, p));
-
-	return Math.round(num * factor) / factor;
+	return parseFloat(
+		num.toPrecision(prec || 14)
+	);
 };
 
 /**
