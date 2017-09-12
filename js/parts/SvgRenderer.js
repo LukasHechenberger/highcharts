@@ -654,7 +654,7 @@ extend(SVGElement.prototype, /** @lends Highcharts.SVGElement.prototype */ {
 
 	/**
 	 * Remove a class name from the element.
-	 * @param  {string} className The class name to remove.
+	 * @param  {String|RegExp} className The class name to remove.
 	 * @return {SVGElement} Returns the SVG element for chainability.
 	 */
 	removeClass: function (className) {
@@ -2397,7 +2397,10 @@ extend(SVGRenderer.prototype, /** @lends Highcharts.SVGRenderer.prototype */ {
 							/*= } =*/
 						}
 
-						span = unescapeEntities(span.replace(/<(.|\n)*?>/g, '') || ' ');
+						// Strip away unsupported HTML tags (#7126)
+						span = unescapeEntities(
+							span.replace(/<[a-zA-Z\/](.|\n)*?>/g, '') || ' '
+						);
 
 						// Nested tags aren't supported, and cause crash in Safari (#1596)
 						if (span !== ' ') {

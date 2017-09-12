@@ -179,7 +179,11 @@ Series.prototype.drawDataLabels = function () {
 			// @note dataLabelAttribs (like pointAttribs) would eradicate
 			// the need for dlOptions, and simplify the section below.
 			pointOptions = point.dlOptions || (point.options && point.options.dataLabels); // dlOptions is used in treemaps
-			enabled = pick(pointOptions && pointOptions.enabled, generalOptions.enabled) && point.y !== null; // #2282, #4641
+			enabled = pick(
+				pointOptions && pointOptions.enabled,
+				generalOptions.enabled
+			) && !point.isNull; // #2282, #4641, #7112
+
 			if (enabled) {
 				// Create individual options structure that can be extended without
 				// affecting others
@@ -589,18 +593,15 @@ if (seriesTypes.pie) {
 				dataLabel = point.dataLabel;
 				visibility = point.visible === false ? 'hidden' : 'inherit';
 				naturalY = labelPos[1];
+				y = naturalY;
 
 				if (positions && defined(positions[positionsIndex])) {
 					if (positions[positionsIndex].pos === undefined) {
 						visibility = 'hidden';
-						y = 0;
 					} else {
 						labelHeight = positions[positionsIndex].size;
 						y = point.top + positions[positionsIndex].pos;
 					}
-
-				} else {
-					y = naturalY;
 				}
 
 				// It is needed to delete point.positionIndex for 
