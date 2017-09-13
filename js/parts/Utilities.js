@@ -616,7 +616,7 @@ H.erase = function (arr, item) {
  *        true.
  */
 H.defined = function (obj) {
-	return obj !== undefined && obj !== null;
+	return !(obj === undefined || obj === null);
 };
 
 /**
