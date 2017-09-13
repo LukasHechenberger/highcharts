@@ -454,9 +454,9 @@ H.extend = function (a, b) {
  * return is the same as the second argument.
  */
 H.merge = function () {
-	var i,
+	var i = 0,
 		args = arguments,
-		len,
+		len = arguments.length,
 		ret = {},
 		doCopy = function (copy, original) {
 			// An object is replacing a primitive
@@ -486,12 +486,12 @@ H.merge = function () {
 	// setOptions.
 	if (args[0] === true) {
 		ret = args[1];
-		args = Array.prototype.slice.call(args, 2);
+		i = 2;
 	}
 
 	// For each argument, extend the return
 	len = args.length;
-	for (i = 0; i < len; i++) {
+	for (; i < len; i++) {
 		ret = doCopy(ret, args[i]);
 	}
 
